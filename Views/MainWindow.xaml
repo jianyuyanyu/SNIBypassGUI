@@ -1,14 +1,19 @@
 ﻿<Window x:Class="SNIBypassGUI.Views.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:tb="http://www.hardcodet.net/taskbar"
-        xmlns:hc="https://handyorg.github.io/handycontrol"
-        xmlns:local="clr-namespace:SNIBypassGUI.Views"
-        mc:Ignorable="d"
-        Loaded="Window_Loaded"
-        Title="SNIBypassGUI" Height="500" Width="800" AllowsTransparency="True" ResizeMode="NoResize" Closing="Window_Closing" Background="Transparent" WindowStartupLocation="CenterScreen" WindowStyle="None" Opacity="0" FontFamily="{StaticResource LXGWWenKai-Regular}">
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:tb="http://www.hardcodet.net/taskbar"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
+             xmlns:local="clr-namespace:SNIBypassGUI.Views"
+             xmlns:behaviors="clr-namespace:SNIBypassGUI.Behaviors"
+             mc:Ignorable="d"
+             Loaded="Window_Loaded"
+             Title="SNIBypassGUI" Height="500" Width="800" 
+             AllowsTransparency="True" ResizeMode="NoResize" 
+             Closing="Window_Closing" Background="Transparent" 
+             WindowStartupLocation="CenterScreen" WindowStyle="None" Opacity="0" d:Opacity="1"
+             FontFamily="{StaticResource LXGWWenKai-Regular}" ShowInTaskbar="False">
     <Window.Resources>
         <Style TargetType="RichTextBox">
             <Setter Property="Template">
@@ -29,21 +34,21 @@
                     <Viewbox Stretch="UniformToFill">
                         <Grid Width="{Binding ActualWidth, ElementName=MainPage}" Height="{Binding ActualHeight, ElementName=MainPage}" Background="White">
                             <Image x:Name="CurrentImage" 
-                               Source="{Binding BackgroundService.CurrentImage}"
-                               Stretch="UniformToFill"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Width="{Binding ActualWidth, ElementName=MainPage}"
-                               Height="{Binding ActualHeight, ElementName=MainPage}"
-                               Opacity="1"/>
-
+                                       Source="{Binding BackgroundService.CurrentImage}"
+                                       Stretch="UniformToFill"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Width="{Binding ActualWidth, ElementName=MainPage}"
+                                       Height="{Binding ActualHeight, ElementName=MainPage}"
+                                       Opacity="1"
+                                       d:Source="/Resources/Images/4701.jpg"/>
                             <Image x:Name="NextImage"
-                               Stretch="UniformToFill"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Width="{Binding ActualWidth, ElementName=MainPage}"
-                               Height="{Binding ActualHeight, ElementName=MainPage}"
-                               Opacity="0"/>
+                                       Stretch="UniformToFill"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Width="{Binding ActualWidth, ElementName=MainPage}"
+                                       Height="{Binding ActualHeight, ElementName=MainPage}"
+                                       Opacity="0"/>
                         </Grid>
                     </Viewbox>
                 </VisualBrush.Visual>
@@ -54,26 +59,35 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition />
             </Grid.RowDefinitions>
-            <tb:TaskbarIcon x:Name="TaskbarIcon" LeftClickCommand="{Binding TaskbarIconLeftClickCommand}" DoubleClickCommand="{Binding _TaskbarIconLeftClickCommand}" IconSource="/Resources/icon.ico" ToolTipText="SNIBypassGUI">
+            <tb:TaskbarIcon x:Name="TaskbarIcon" LeftClickCommand="{Binding TaskbarIconLeftClickCommand}" IconSource="/Resources/icon.ico">
                 <tb:TaskbarIcon.TrayToolTip>
-                    <Border BorderBrush="#FF46FFD0" Background="White" BorderThickness="1" CornerRadius="8" Width="250" Height="auto">
-                        <StackPanel>
-                            <TextBlock Foreground="#FF2BFF00" Text="SNIBypassGUI" Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" FontFamily="{StaticResource LXGWWenKai-Regular}"/>
-                            <TextBlock x:Name="ReferenceTextBlock" Margin="5,0,5,5" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="14" FontFamily="{StaticResource LXGWWenKai-Regular}">
-			                <Run Foreground="#FF00FFED" Text="服务状态："/>
-			                <Run x:Name="TaskbarIconServiceST"  Text="主服务和DNS服务未运行" Foreground="Red"/>
-                            </TextBlock>
-                            <TextBlock Foreground="DeepPink" x:Name="TaskbarIconYiyan" Margin="5,0,5,5" TextWrapping="Wrap" Text="休对故人思故国，且将新火试新茶。诗酒趁年华。" HorizontalAlignment="Left" VerticalAlignment="Center" FontFamily="{StaticResource LXGWWenKai-Regular}"/>
-                            <TextBlock Foreground="DarkViolet" x:Name="TaskbarIconYiyanFrom" Margin="5,0,5,5" TextWrapping="Wrap" Text="—— 苏轼「望江南·超然台作」" TextAlignment="Right" VerticalAlignment="Center" FontStyle="Italic"/>
-                        </StackPanel>
-                    </Border>
+                    <ToolTip Background="Transparent" BorderThickness="0" HasDropShadow="False" Placement="Mouse">
+                        <ToolTip.Template>
+                            <ControlTemplate TargetType="ToolTip">
+                                <ContentPresenter />
+                            </ControlTemplate>
+                        </ToolTip.Template>
+                        <Border Background="{DynamicResource BackgroundBrush}" Padding="10" CornerRadius="8">
+                            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Width="250" Height="auto">
+                                <StackPanel>
+                                    <TextBlock Foreground="CornflowerBlue" Text="SNIBypassGUI" Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" FontFamily="{StaticResource LXGWWenKai-Regular}"/>
+                                    <TextBlock x:Name="TaskbarIconServiceST" Text="主服务和DNS服务未运行" Foreground="Red" Margin="5,0,5,5" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="14" FontFamily="{StaticResource LXGWWenKai-Regular}"/>
+                                    <TextBlock Foreground="DeepPink" x:Name="TaskbarIconYiyan" Margin="5,0,5,5" TextWrapping="Wrap" Text="休对故人思故国，且将新火试新茶。诗酒趁年华。" HorizontalAlignment="Left" VerticalAlignment="Center" FontFamily="{StaticResource LXGWWenKai-Regular}"/>
+                                    <TextBlock Foreground="DarkViolet" x:Name="TaskbarIconYiyanFrom" Margin="5,0,5,5" TextWrapping="Wrap" Text="—— 苏轼「望江南·超然台作」" TextAlignment="Right" VerticalAlignment="Center" FontStyle="Italic" FontFamily="{StaticResource LXGWWenKai-Regular}"/>
+                                </StackPanel>
+                            </Border>
+                        </Border>
+                    </ToolTip>
                 </tb:TaskbarIcon.TrayToolTip>
                 <tb:TaskbarIcon.ContextMenu>
                     <ContextMenu>
+                        <ContextMenu.Resources>
+                            <StaticResource x:Key="SecondaryRegionBrush" ResourceKey="BackgroundBrush"/>
+                        </ContextMenu.Resources>
                         <ContextMenu.Background>
-                            <ImageBrush Stretch="UniformToFill" ImageSource="/Resources/imgs/MenuBkg.png"/>
+                            <ImageBrush Stretch="UniformToFill" ImageSource="/Resources/Images/MenuBkg.png" Opacity="0.44"/>
                         </ContextMenu.Background>
-                        <MenuItem Foreground="White" x:Name="MenuItem_ShowMainWin" Header="显示主窗口" MouseEnter="MenuItem_MouseEnter" MouseLeave="MenuItem_MouseLeave" Click="MenuItem_ShowMainWin_Click" FontFamily="{StaticResource LXGWWenKai-Regular}" FontWeight="Bold">
+                        <MenuItem Foreground="White" x:Name="MenuItem_ShowMainWin" Header="显示主界面" MouseEnter="MenuItem_MouseEnter" MouseLeave="MenuItem_MouseLeave" Click="MenuItem_ShowMainWin_Click" FontFamily="{StaticResource LXGWWenKai-Regular}" FontWeight="Bold">
                             <MenuItem.Icon>
                                 <Viewbox Width="16" Height="16">
                                     <Path Data="{StaticResource HomeGeometry}" Stretch="Uniform" Fill="#00a2ff" Width="138" Height="138" Margin="0,0,0,0" RenderTransformOrigin="0.5,0.5">
@@ -140,7 +154,7 @@
                     </ContextMenu>
                 </tb:TaskbarIcon.ContextMenu>
             </tb:TaskbarIcon>
-            <hc:TransitioningContentControl TransitionMode="Top2BottomWithFade" Grid.Row="0">
+            <hc:TransitioningContentControl x:Name="TransitioningContentControlA" Visibility="Hidden" d:Visibility="Visible" TransitionMode="Top2BottomWithFade" Grid.Row="0">
                 <Border x:Name="TopBar" Margin="10,10,10,5" Background="{DynamicResource BackgroundBrush}" BorderThickness="1.5" CornerRadius="12">
                     <Border.BorderBrush>
                         <LinearGradientBrush EndPoint="1,0">
@@ -155,7 +169,7 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Margin="5" x:Name="WindowTitle" TextWrapping="Wrap" Text="SNIBypassGUI" FontSize="21" Foreground="#FFB700FF" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Column="1"/>
-                        <CheckBox x:Name="ThemeSwitchTB" local:ToggleButtonAttach.IsAutoFold="True" Margin="0,0,8,0" Visibility="Visible" Checked="ThemeSwitchTB_Checked" Unchecked="ThemeSwitchTB_Unchecked" Style="{StaticResource ThemeSwitchStyle}" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <CheckBox x:Name="ThemeSwitchTB" behaviors:ToggleButtonAttach.IsAutoFold="True" Margin="0,0,8,0" Visibility="Visible" Checked="ThemeSwitchTB_Checked" Unchecked="ThemeSwitchTB_Unchecked" Style="{StaticResource ThemeSwitchStyle}" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <CheckBox.Content>
                                 <TextBlock x:Name="ThemeSwitchTBText" Text="切换主题" Foreground="#F3C62B"/>
                             </CheckBox.Content>
@@ -168,8 +182,8 @@
                     <ColumnDefinition/>
                     <ColumnDefinition/>
                 </Grid.ColumnDefinitions>
-                <hc:TransitioningContentControl TransitionMode="Top2BottomWithFade" Grid.Column="0">
-                    <RichTextBox ScrollViewer.VerticalScrollBarVisibility="Visible" Margin="10,10,10,10" BorderBrush="White" IsReadOnly="True" >
+                <hc:TransitioningContentControl x:Name="TransitioningContentControlB" Margin="10" Visibility="Hidden" d:Visibility="Visible" TransitionMode="Top2BottomWithFade" Grid.Column="0">
+                    <RichTextBox VerticalScrollBarVisibility="Visible" BorderBrush="White" IsReadOnly="True">
                         <FlowDocument>
                             <Paragraph TextAlignment="Center">
                                 <Span FontSize="30" Foreground="#FFFF12D5">
@@ -182,16 +196,33 @@
                                 </Span>
                                 <LineBreak/>
                                 <Span FontSize="18" Foreground="OrangeRed">
-                                    <Run Text="请关闭所有杀毒软件且不要使用 Steamcommunity 302 等类似软件" />
+                                    <Run Text="请务必关闭所有杀毒软件或将软件所在目录添加至信任区，且不要使用 Steamcommunity 302 等类似软件。" />
                                     <LineBreak/>
                                     <Run Text="否则程序可能会出现无法访问网页或闪退等异常情况！" FontSize="20"/>
+                                </Span>
+                                <LineBreak/>
+                                <LineBreak/>
+                                <InlineUIContainer>
+                                    <Separator Width="340" BorderBrush="{DynamicResource BorderBrush}"/>
+                                </InlineUIContainer>
+                            </Paragraph>
+                            <Paragraph TextAlignment="Center">
+                                <Span FontSize="18" Foreground="#FF1C65DC">
+                                    <Run Text="您可能还想了解" />
                                 </Span>
                             </Paragraph>
                             <Paragraph TextAlignment="Left">
                                 <Span>
-                                    <Run Text="➲ DNS（Domain Name System）是什么？" FontSize="24" Foreground="#FF00D88E"/>
+                                    <InlineUIContainer>
+                                        <Path Data="{StaticResource BulbGeometry}" 
+                                                 Fill="#FF00D88E" 
+                                                 Width="24" Height="24" 
+                                                 Stretch="Uniform" 
+                                                 Margin="0,0,3,0" VerticalAlignment="Center"/>
+                                    </InlineUIContainer>
+                                    <Run Text="DNS（域名系统）是什么？" FontSize="24" Foreground="#FF00D88E"/>
                                     <LineBreak/>
-                                    <Run Text="     DNS可以理解为互联网中的“电话簿”，它的作用是将我们常用的域名（例如：www.example.com）转换成计算机可以理解的IP地址（例如：192.0.2.1），因为计算机是通过IP地址来进行通信的。" FontSize="18">
+                                    <Run Text="     DNS 可以理解为互联网的“电话簿”。它的作用是将我们常用的域名（例如：www.example.com）转换为计算机能够理解的 IP 地址（例如：192.0.2.1），因为计算机之间是通过 IP 地址进行通信的。" FontSize="18">
                                         <Run.Foreground>
                                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                                 <LinearGradientBrush.RelativeTransform>
@@ -208,7 +239,7 @@
                                         </Run.Foreground>
                                     </Run>
                                     <LineBreak/>
-                                    <Run Text="     假设你想给一个朋友打电话，但你手上只有朋友的名字，而没有电话号码。你去查找电话簿，输入朋友的名字，电话簿会告诉你朋友的电话号码。然后你就可以拨打这个电话号码，打通电话。朋友的名字就像是一个网站的域名，电话号码就是网站的IP地址，而电话簿就是DNS，它负责将域名转换成IP地址。" FontSize="18">
+                                    <Run Text="     这就好比你想给朋友打电话，但你只知道朋友的名字，却没有电话号码。于是你去查阅电话簿，根据名字找到了对应的电话号码，然后才能成功拨号。在这里，朋友的名字就像是网站的域名，电话号码就是网站的 IP 地址，而电话簿就是 DNS，它负责完成从域名到 IP 地址的转换。" FontSize="18">
                                         <Run.Foreground>
                                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                                 <LinearGradientBrush.RelativeTransform>
@@ -225,7 +256,7 @@
                                         </Run.Foreground>
                                     </Run>
                                     <LineBreak/>
-                                    <Run Text="     当你在浏览器中输入网址时，DNS会帮助你找到对应的IP地址，然后你的计算机就能连接到正确的网站。" FontSize="18">
+                                    <Run Text="     当你在浏览器中输入网址时，正是 DNS 在背后帮你找到对应的 IP 地址，从而使你的计算机能够连接到正确的网站服务器。" FontSize="18">
                                         <Run.Foreground>
                                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                                 <LinearGradientBrush.RelativeTransform>
@@ -243,9 +274,16 @@
                                     </Run>
                                     <LineBreak/>
                                     <LineBreak/>
-                                    <Run Text="➲ SNI（Server Name Indication）是什么？" FontSize="24" Foreground="#FF00BCFB"/>
+                                    <InlineUIContainer>
+                                        <Path Data="{StaticResource BulbGeometry}" 
+                                                 Fill="#FF00BCFB" 
+                                                 Width="24" Height="24" 
+                                                 Stretch="Uniform" 
+                                                 Margin="0,0,3,0" VerticalAlignment="Center"/>
+                                    </InlineUIContainer>
+                                    <Run Text="SNI（服务器名称指示）是什么？" FontSize="24" Foreground="#FF00BCFB"/>
                                     <LineBreak/>
-                                    <Run Text="     SNI是TLS/SSL协议的一部分，用于在建立加密连接之前，客户端向服务器说明自己想连接哪个具体网站。简而言之，SNI就像是你到达酒店时，先告诉前台你要去哪个房间（网站），然后前台才能决定给你哪把钥匙。" FontSize="18">
+                                    <Run Text="     SNI 是 TLS/SSL 协议的一个扩展功能，用于在建立加密连接之前，由客户端向服务器指明它想要连接的具体网站。简单来说，SNI 就像是你入住酒店时，先向前台说明你要去的房间号（网站），前台才能给你正确的钥匙（建立对应连接）。" FontSize="18">
                                         <Run.Foreground>
                                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                                 <LinearGradientBrush.RelativeTransform>
@@ -263,9 +301,16 @@
                                     </Run>
                                     <LineBreak/>
                                     <LineBreak/>
-                                    <Run Text="➲ GFW（Great Firewall，简称“防火长城”）是什么？" FontSize="24" Foreground="#FF8738FF"/>
+                                    <InlineUIContainer>
+                                        <Path Data="{StaticResource BulbGeometry}" 
+                                                 Fill="#FF8738FF" 
+                                                 Width="24" Height="24" 
+                                                 Stretch="Uniform" 
+                                                 Margin="0,0,3,0" VerticalAlignment="Center"/>
+                                    </InlineUIContainer>
+                                    <Run Text="GFW（长城防火墙）是什么？" FontSize="24" Foreground="#FF8738FF"/>
                                     <LineBreak/>
-                                    <Run Text="     GFW是中国的一个网络审查和过滤系统，旨在限制和监控从中国境内访问全球互联网的流量。它的主要功能是阻止或限制中国用户访问某些外国网站和服务，同时监控、审查互联网上的信息流动。" FontSize="18">
+                                    <Run Text="     GFW 是中国建立的网络审查与流量过滤系统，主要用于监控和限制境内用户对全球互联网的访问。其核心功能是阻止或限制用户访问某些境外网站和服务，并对互联网信息流动进行审查。" FontSize="18">
                                         <Run.Foreground>
                                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                                 <LinearGradientBrush.RelativeTransform>
@@ -282,7 +327,7 @@
                                         </Run.Foreground>
                                     </Run>
                                     <LineBreak/>
-                                    <Run Text="     GFW通过多种技术手段工作，如DNS劫持、IP封锁、深度包检测（DPI）、URL过滤等。" FontSize="18">
+                                    <Run Text="     GFW 通过多种技术手段实现其功能，例如 DNS 劫持、IP 封锁、深度包检测（DPI）以及 URL 过滤等。" FontSize="18">
                                         <Run.Foreground>
                                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                                 <LinearGradientBrush.RelativeTransform>
@@ -300,9 +345,16 @@
                                     </Run>
                                     <LineBreak/>
                                     <LineBreak/>
-                                    <Run Text="➲ DNS劫持是什么？" FontSize="24" Foreground="#FF00D88E"/>
+                                    <InlineUIContainer>
+                                        <Path Data="{StaticResource BulbGeometry}" 
+                                                 Fill="#FF00D88E" 
+                                                 Width="24" Height="24" 
+                                                 Stretch="Uniform" 
+                                                 Margin="0,0,3,0" VerticalAlignment="Center"/>
+                                    </InlineUIContainer>
+                                    <Run Text="DNS劫持是什么？" FontSize="24" Foreground="#FF00D88E"/>
                                     <LineBreak/>
-                                    <Run Text="     DNS劫持就像你问路时被人故意指错方向，让你误入假网站，甚至泄露个人信息。" FontSize="18">
+                                    <Run Text="     DNS 劫持好比问路时被人故意指向错误的方向，导致你访问到虚假网站，甚至可能造成个人信息泄露。" FontSize="18">
                                         <Run.Foreground>
                                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                                 <LinearGradientBrush.RelativeTransform>
@@ -319,7 +371,7 @@
                                         </Run.Foreground>
                                     </Run>
                                     <LineBreak/>
-                                    <Run Text="     DNS污染是一种类似于DNS劫持的技术网络审查技术，它通过篡改或“污染”DNS查询结果，阻止用户访问特定的网站。但污染的方式更为普遍且持续，可以影响大量的DNS请求。" FontSize="18">
+                                    <Run Text="     DNS 污染是一种与 DNS 劫持类似的网络审查技术，它通过篡改或“污染” DNS 查询的响应结果，来阻止用户访问特定网站。这种方式的影响范围通常更广，能够持续干扰大量的 DNS 请求。" FontSize="18">
                                         <Run.Foreground>
                                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                                 <LinearGradientBrush.RelativeTransform>
@@ -337,9 +389,16 @@
                                     </Run>
                                     <LineBreak/>
                                     <LineBreak/>
-                                    <Run Text="➲ SNI阻断是什么？" FontSize="24" Foreground="#FF7E38FF"/>
+                                    <InlineUIContainer>
+                                        <Path Data="{StaticResource BulbGeometry}" 
+                                                 Fill="#FF7E38FF" 
+                                                 Width="24" Height="24" 
+                                                 Stretch="Uniform" 
+                                                 Margin="0,0,3,0" VerticalAlignment="Center"/>
+                                    </InlineUIContainer>
+                                    <Run Text="SNI阻断是什么？" FontSize="24" Foreground="#FF7E38FF"/>
                                     <LineBreak/>
-                                    <Run Text="     当用户访问一个使用HTTPS的网站，客户端在发起SSL/TLS握手时，会将目标网站的域名发送给服务器。中间的网络设备可以读取这些SNI信息。根据SNI信息，网络服务提供商可能选择阻止与特定域名的连接请求。" FontSize="18">
+                                    <Run Text="     当用户访问一个 HTTPS 网站时，客户端在 SSL/TLS 握手过程中会将目标网站的域名（SNI信息）发送给服务器。位于路径上的网络设备可以读取此信息。网络服务提供商可以根据 SNI 信息，选择阻断与特定域名的连接请求。" FontSize="18">
                                         <Run.Foreground>
                                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                                 <LinearGradientBrush.RelativeTransform>
@@ -357,9 +416,16 @@
                                     </Run>
                                     <LineBreak/>
                                     <LineBreak/>
-                                    <Run Text="➲ SNI明文传输，是否安全？" FontSize="24" Foreground="#FFF74D73"/>
+                                    <InlineUIContainer>
+                                        <Path Data="{StaticResource BulbGeometry}" 
+                                                 Fill="#FFF74D73" 
+                                                 Width="24" Height="24" 
+                                                 Stretch="Uniform" 
+                                                 Margin="0,0,3,0" VerticalAlignment="Center"/>
+                                    </InlineUIContainer>
+                                    <Run Text="SNI明文传输，是否安全？" FontSize="24" Foreground="#FFF74D73"/>
                                     <LineBreak/>
-                                    <Run Text="     由于SNI信息并未加密，审查者可以识别出用户访问的网站域名。现已被部分国家用于互联网审查，如GFW和韩国的KCSC。" FontSize="18">
+                                    <Run Text="     由于 SNI 信息在传输过程中未加密，网络审查者可以据此识别用户试图访问的网站域名。目前，该技术已被部分国家用于互联网审查，例如中国的 GFW 和韩国的 KCSC。" FontSize="18">
                                         <Run.Foreground>
                                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                                 <LinearGradientBrush.RelativeTransform>
@@ -376,7 +442,7 @@
                                         </Run.Foreground>
                                     </Run>
                                     <LineBreak/>
-                                    <Run Text="     为了解决这个问题，一种旨在解决主机名称泄漏问题的TLS扩充协议 —— ESNI（Encrypted Server Name Indication）出现了。但自2020年7月下旬起，GFW开始封锁所有ESNI的TLS通信。" FontSize="18">
+                                    <Run Text="     为了解决 SNI 信息泄露的问题，出现了 ESNI（以及其后续标准 ECH）这类 TLS 扩展协议，旨在对 SNI 进行加密。但自2020年起，GFW 开始封锁所有携带加密 SNI 的 TLS 通信。" FontSize="18">
                                         <Run.Foreground>
                                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                                 <LinearGradientBrush.RelativeTransform>
@@ -394,9 +460,16 @@
                                     </Run>
                                     <LineBreak/>
                                     <LineBreak/>
-                                    <Run Text="➲ 本软件如何绕过GFW对部分站点的封锁？" FontSize="24" Foreground="#FF38C4FF"/>
+                                    <InlineUIContainer>
+                                        <Path Data="{StaticResource BulbGeometry}" 
+                                                 Fill="#FF38C4FF" 
+                                                 Width="24" Height="24" 
+                                                 Stretch="Uniform" 
+                                                 Margin="0,0,3,0" VerticalAlignment="Center"/>
+                                    </InlineUIContainer>
+                                    <Run Text="本软件如何绕过GFW对部分站点的封锁？" FontSize="24" Foreground="#FF38C4FF"/>
                                     <LineBreak/>
-                                    <Run Text="     通过本地DNS服务或系统hosts文件将被封锁的域名及子域名指向127.0.0.1，有关请求会先到达Nginx本地代理服务器。Nginx本地代理服务器会直接与目标服务器建立连接，并不发送或发送虚假的SNI信息给目标服务器。" FontSize="18">
+                                    <Run Text="     本软件通过本地 DNS 服务，将被封锁的域名及其子域名指向 127.0.0.1（本地回环地址）。这样，相关的网络请求会首先发送到本地的 Nginx 代理服务器。随后，Nginx 服务器会直接与目标服务器建立连接，并在握手过程中发送虚假的（无害的）SNI 信息，或在特定情况下不发送 SNI。" FontSize="18">
                                         <Run.Foreground>
                                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                                 <LinearGradientBrush.RelativeTransform>
@@ -413,61 +486,7 @@
                                         </Run.Foreground>
                                     </Run>
                                     <LineBreak/>
-                                    <Run Text="     这时，GFW就不会因为读取到SNI中含有被封锁的域名从而阻断连接，即域前置；此种方法也同时避免了DNS污染与劫持。" FontSize="18">
-                                        <Run.Foreground>
-                                            <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-                                                <LinearGradientBrush.RelativeTransform>
-                                                    <TransformGroup>
-                                                        <ScaleTransform CenterY="0.5" CenterX="0.5"/>
-                                                        <SkewTransform CenterX="0.5" CenterY="0.5"/>
-                                                        <RotateTransform Angle="220" CenterX="0.5" CenterY="0.5"/>
-                                                        <TranslateTransform/>
-                                                    </TransformGroup>
-                                                </LinearGradientBrush.RelativeTransform>
-                                                <GradientStop Color="#FF6F24F9"/>
-                                                <GradientStop Color="#FF00BCFB" Offset="1"/>
-                                            </LinearGradientBrush>
-                                        </Run.Foreground>
-                                    </Run>
-                                    <LineBreak/>
-                                    <Run Text="     域前置通过SNI中使用虚假无害的域名信息，已经被TLS加密的应用层才使用真实的域名信息，将真实流量隐藏在看似无害的流量中，从而使审查者无法区别出来。" FontSize="18">
-                                        <Run.Foreground>
-                                            <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-                                                <LinearGradientBrush.RelativeTransform>
-                                                    <TransformGroup>
-                                                        <ScaleTransform CenterY="0.5" CenterX="0.5"/>
-                                                        <SkewTransform CenterX="0.5" CenterY="0.5"/>
-                                                        <RotateTransform Angle="220" CenterX="0.5" CenterY="0.5"/>
-                                                        <TranslateTransform/>
-                                                    </TransformGroup>
-                                                </LinearGradientBrush.RelativeTransform>
-                                                <GradientStop Color="#FFB700FF"/>
-                                                <GradientStop Color="#FF234CF3" Offset="1"/>
-                                            </LinearGradientBrush>
-                                        </Run.Foreground>
-                                    </Run>
-                                    <LineBreak/>
-                                    <LineBreak/>
-                                    <Run Text="➲ CDN（Content Delivery Network）是什么？" FontSize="24" Foreground="#FFFBCF00"/>
-                                    <LineBreak/>
-                                    <Run Text="     CDN是一种通过将网站内容缓存到多个分布在不同地区的服务器上，以提高用户访问速度的技术。简单来说，CDN的作用就是让网站的数据更快、更稳定地传递到用户。" FontSize="18">
-                                        <Run.Foreground>
-                                            <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-                                                <LinearGradientBrush.RelativeTransform>
-                                                    <TransformGroup>
-                                                        <ScaleTransform CenterY="0.5" CenterX="0.5"/>
-                                                        <SkewTransform CenterX="0.5" CenterY="0.5"/>
-                                                        <RotateTransform Angle="220" CenterX="0.5" CenterY="0.5"/>
-                                                        <TranslateTransform/>
-                                                    </TransformGroup>
-                                                </LinearGradientBrush.RelativeTransform>
-                                                <GradientStop Color="#FF6F24F9"/>
-                                                <GradientStop Color="#FF00BCFB" Offset="1"/>
-                                            </LinearGradientBrush>
-                                        </Run.Foreground>
-                                    </Run>
-                                    <LineBreak/>
-                                    <Run Text="     就像你去一家图书馆借书。如果这本书只有一个库存在美国，你必须跨大洋才能借到。但是，如果这本书在世界各地的图书馆都有了，那么你只需要去最近的图书馆就能借到，节省了时间，效率更高。" FontSize="18">
+                                    <Run Text="     此时，GFW 监测到的只是一个无害的域名连接请求，因而会放行该连接。一旦加密通道建立，实际的数据传输才会包含真实的请求信息。这种方法同时也能有效避免 DNS 污染与劫持。" FontSize="18">
                                         <Run.Foreground>
                                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                                 <LinearGradientBrush.RelativeTransform>
@@ -485,9 +504,60 @@
                                     </Run>
                                     <LineBreak/>
                                     <LineBreak/>
-                                    <Run Text="➲ 为什么无法支持部分站点？" FontSize="24" Foreground="#FFFFCA38"/>
+                                    <InlineUIContainer>
+                                        <Path Data="{StaticResource BulbGeometry}" 
+                                                 Fill="#FFFBCF00" 
+                                                 Width="24" Height="24" 
+                                                 Stretch="Uniform" 
+                                                 Margin="0,0,3,0" VerticalAlignment="Center"/>
+                                    </InlineUIContainer>
+                                    <Run Text="CDN（内容分发网络）是什么？" FontSize="24" Foreground="#FFFBCF00"/>
                                     <LineBreak/>
-                                    <Run Text="     一些较大型的网站为了降低带宽成本和提升全球范围的访问速度与安全性，采用了像Amazon CloudFront、Cloudflare这样的大型CDN业务。" FontSize="18">
+                                    <Run Text="     CDN 是一种通过将网站内容缓存到遍布全球多个地区的服务器上，从而提升用户访问速度与稳定性的技术。简而言之，CDN 能让网站数据更快、更可靠地传递给用户。" FontSize="18">
+                                        <Run.Foreground>
+                                            <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                                <LinearGradientBrush.RelativeTransform>
+                                                    <TransformGroup>
+                                                        <ScaleTransform CenterY="0.5" CenterX="0.5"/>
+                                                        <SkewTransform CenterX="0.5" CenterY="0.5"/>
+                                                        <RotateTransform Angle="220" CenterX="0.5" CenterY="0.5"/>
+                                                        <TranslateTransform/>
+                                                    </TransformGroup>
+                                                </LinearGradientBrush.RelativeTransform>
+                                                <GradientStop Color="#FF6F24F9"/>
+                                                <GradientStop Color="#FF00BCFB" Offset="1"/>
+                                            </LinearGradientBrush>
+                                        </Run.Foreground>
+                                    </Run>
+                                    <LineBreak/>
+                                    <Run Text="     这就像你去图书馆借书。如果这本书唯一的副本存放在美国，你就不得不跨洋借阅。但如果这本书在世界各地的图书馆都有馆藏，你只需要前往最近的一家便能借到，大大节省了时间，效率自然更高。" FontSize="18">
+                                        <Run.Foreground>
+                                            <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                                <LinearGradientBrush.RelativeTransform>
+                                                    <TransformGroup>
+                                                        <ScaleTransform CenterY="0.5" CenterX="0.5"/>
+                                                        <SkewTransform CenterX="0.5" CenterY="0.5"/>
+                                                        <RotateTransform Angle="220" CenterX="0.5" CenterY="0.5"/>
+                                                        <TranslateTransform/>
+                                                    </TransformGroup>
+                                                </LinearGradientBrush.RelativeTransform>
+                                                <GradientStop Color="#FF6F24F9"/>
+                                                <GradientStop Color="#FF00BCFB" Offset="1"/>
+                                            </LinearGradientBrush>
+                                        </Run.Foreground>
+                                    </Run>
+                                    <LineBreak/>
+                                    <LineBreak/>
+                                    <InlineUIContainer>
+                                        <Path Data="{StaticResource BulbGeometry}" 
+                                                 Fill="#FFFFCA38" 
+                                                 Width="24" Height="24" 
+                                                 Stretch="Uniform" 
+                                                 Margin="0,0,3,0" VerticalAlignment="Center"/>
+                                    </InlineUIContainer>
+                                    <Run Text="为什么无法支持部分站点？" FontSize="24" Foreground="#FFFFCA38"/>
+                                    <LineBreak/>
+                                    <Run Text="     一些大型网站为了降低带宽成本、提升全球访问速度与安全性，会采用 Amazon CloudFront、Cloudflare 等大型 CDN 服务。" FontSize="18">
                                         <Run.Foreground>
                                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                                 <LinearGradientBrush.RelativeTransform>
@@ -504,7 +574,7 @@
                                         </Run.Foreground>
                                     </Run>
                                     <LineBreak/>
-                                    <Run Text="     但不幸的是，并非所有CDN都支持域前置技术。Cloudflare在2016年的一些修改让基于其CDN的域前置不再工作。Google于2018年4月宣布将在Google应用服务引擎禁用域前置，称这从未是Google有意支持的一项功能。亚马逊公司也在不久后决定停用CloudFront上的域前置兼容，表示这已被视为违反亚马逊网络服务系统（AWS）服务条款。" FontSize="18">
+                                    <Run Text="     然而，并非所有 CDN 都支持域前置技术。Cloudflare 在 2016 年进行的某些调整导致基于其服务的域前置失效。谷歌于 2018 年 4 月宣布将在其应用引擎服务中禁用域前置，称这并非其有意支持的功能。随后，亚马逊也决定停止其 CloudFront 服务对域前置的兼容，并表示这将违反亚马逊云服务（AWS）的服务条款。" FontSize="18">
                                         <Run.Foreground>
                                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                                 <LinearGradientBrush.RelativeTransform>
@@ -521,7 +591,7 @@
                                         </Run.Foreground>
                                     </Run>
                                     <LineBreak/>
-                                    <Run Text="     不完全统计，目前兼容域前置的CDN有Automattic、CDN77、Fastly、StackPath和Incapsula、Microsoft Azure。若被封锁站点使用了不兼容域前置技术的CDN，则需要找到未被封锁的源站IP，这在大多数情况下是困难的。" FontSize="18">
+                                    <Run Text="     据不完全统计，目前仍兼容域前置的 CDN 服务商包括 CDN77、Fastly、StackPath、Incapsula 和 Microsoft Azure。若被封锁的站点使用了不兼容域前置技术的 CDN，则需要找到该站点未被封锁的源站 IP 地址，而这在大多数情况下都非常困难。" FontSize="18">
                                         <Run.Foreground>
                                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                                 <LinearGradientBrush.RelativeTransform>
@@ -538,7 +608,7 @@
                                         </Run.Foreground>
                                     </Run>
                                     <LineBreak/>
-                                    <Run Text="     鉴于此，我们十分欢迎您在该方面上做出有关贡献。您可以直接发送邮件给我们，或通过在Github上提交Issue。" FontSize="18">
+                                    <Run Text="     因此，我们非常欢迎您在此方面做出贡献。您可以直接发送邮件给我们，或在 GitHub 上提交 Issue。" FontSize="18">
                                         <Run.Foreground>
                                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                                 <LinearGradientBrush.RelativeTransform>
@@ -556,24 +626,10 @@
                                     </Run>
                                 </Span>
                             </Paragraph>
-                            <Paragraph TextAlignment="Left" FontSize="18">
-                                <Span Foreground="#FF31EF83">
-                                    <Run Text="     本程序的前身Pixiv-Nginx-GUI，旨在为没有相关基础但需要使用该项目的人士提供一个更易于使用的方案。"/>
-                                </Span>
-                                <LineBreak/>
-                                <Span Foreground="#FF3C75FF">
-                                    <Run Text="     为了更好地适应程序的发展与版本的更迭，迁移到SNIBypassGUI继续开发，以提供更好的使用体验与更广的适用范围。"/>
-                                </Span>
-                                <LineBreak/>
-                                <Span Foreground="#FFC74DE4">
-                                    <Run Text="项目地址："/>
-                                </Span>
-                                <Run Cursor="Hand" PreviewMouseDown="LinkText_PreviewMouseDown" FontFamily="Microsoft Ya Hei UI" Foreground="#FF3C75FF" TextDecorations="Underline" Text="https://github.com/racpast/SNIBypassGUI"/>
-                            </Paragraph>
                         </FlowDocument>
                     </RichTextBox>
                 </hc:TransitioningContentControl>
-                <hc:TransitioningContentControl TransitionMode="Top2BottomWithFade" Grid.Column="1">
+                <hc:TransitioningContentControl x:Name="TransitioningContentControlC" Visibility="Hidden" d:Visibility="Visible" TransitionMode="Top2BottomWithFade" Grid.Column="1">
                     <Border CornerRadius="12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Background="{DynamicResource BackgroundBrush}" Margin="10">
                         <hc:TabControl x:Name="MainTabControl" Style="{StaticResource TabControlInLine}" IsAnimationEnabled="True" Background="Transparent"  FontSize="14" BorderBrush="Transparent" BorderThickness="0">
                             <hc:TabItem Header="主页" IsSelected="True" Background="Transparent">
@@ -581,9 +637,9 @@
                                     <StackPanel>
                                         <TextBlock Margin="20,5,20,5" TextWrapping="Wrap" Text="欢迎使用 &#x000A;SNIBypassGUI！" FontSize="24" Foreground="#FF2100C3" />
                                         <TextBlock Margin="20,0,20,5" TextWrapping="Wrap" Text="如果您遇到了浏览器提示连接不安全的问题，请单击下方按钮安装证书。" FontSize="18" Foreground="#FF8738FF" />
-                                        <Button x:Name="InstallCertBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource CertificateGeometry}" Click="InstallCertBtn_Click" Margin="10,0,10,0" HorizontalAlignment="Stretch" Content="安装证书"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4"  Foreground="#FF2100C3" BorderBrush="#FF2100C3"/>
-                                        <Grid Margin="10,15,10,15" Background="{DynamicResource BackgroundBrush}">
-                                            <Rectangle RadiusX="8" RadiusY="8" Stroke="{DynamicResource BorderBrush}" StrokeDashArray="4,2"/>
+                                        <Button x:Name="InstallCertBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource CertificateGeometry}" Click="InstallCertBtn_Click" Margin="10,0,10,0" HorizontalAlignment="Stretch" Content="安装证书"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FF2100C3" BorderBrush="#FF2100C3"/>
+                                        <Grid Margin="10,15,10,15">
+                                            <Rectangle RadiusX="8" RadiusY="8" Fill="{DynamicResource BackgroundBrush}" Stroke="{DynamicResource BorderBrush}" StrokeDashArray="4,2"/>
                                             <TextBlock x:Name="ServiceStatusText" TextWrapping="Wrap" Text="主服务与DNS服务未运行" FontSize="20" Padding="5" Foreground="Red" TextAlignment="Center"/>
                                         </Grid>
                                         <Grid>
@@ -600,7 +656,7 @@
                                                 <ComboBox x:Name="AdaptersCombo" SelectionChanged="AdaptersCombo_SelectionChanged" Grid.Column="0" hc:BorderElement.CornerRadius="8" Margin="10,0,5,10" SelectedIndex="0" Foreground="#FF2100C3" BorderBrush="#FF2100C3" Background="{DynamicResource BackgroundBrush}" FontSize="15"/>
                                                 <Button hc:BorderElement.CornerRadius="8" Margin="5,0,5,10" Padding="5" HorizontalAlignment="Left" Grid.Column="1" x:Name="HelpBtn_HowToFindActiveAdapter" Click="HelpBtn_HowToFindActiveAdapter_Click" BorderBrush="#FF212121" Background="{DynamicResource BackgroundBrush}" hc:IconElement.Geometry="{StaticResource HelpGeometry}" FontSize="13"/>
                                             </Grid>
-                                            <Button x:Name="GetActiveAdapterBtn" hc:BorderElement.CornerRadius="8"  hc:IconElement.Geometry="{StaticResource FindGeometry}" Grid.Column="2" Click="GetActiveAdapterBtn_Click" Margin="5,0,10,10" Padding="4" HorizontalAlignment="Stretch" Content="自动"  Background="{DynamicResource BackgroundBrush}" FontSize="15"  Foreground="#FF2100C3" BorderBrush="#FF2100C3" VerticalContentAlignment="Center"/>
+                                            <Button x:Name="AutoSwitchAdapterBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource FindGeometry}" Grid.Column="2" Click="AutoSwitchAdapterBtn_Click" Margin="5,0,10,10" Padding="4" HorizontalAlignment="Stretch" Content="自动：开" Background="{DynamicResource BackgroundBrush}" FontSize="15" Foreground="#FF2100C3" BorderBrush="#FF2100C3" VerticalContentAlignment="Center"/>
                                         </Grid>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -611,24 +667,24 @@
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto"/>
                                             </Grid.RowDefinitions>
-                                            <Button x:Name="RefreshBtn" Padding="4" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource RefreshGeometry}" HorizontalAlignment="Stretch" Grid.Column="0" Click="RefreshBtn_Click" Margin="10,0,5,10" Content="刷新"  Background="{DynamicResource BackgroundBrush}" FontSize="15"  Foreground="#FF00C7B9" BorderBrush="#FF00C7B9"/>
-                                            <Button x:Name="StartBtn" Padding="4" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource StartGeometry}" HorizontalAlignment="Stretch" Grid.Column="1" Click="StartBtn_Click" Margin="5,0,5,10" Content="启动"  Background="{DynamicResource BackgroundBrush}" FontSize="15"  Foreground="#FF00ED66" BorderBrush="#FF00ED66"/>
-                                            <Button x:Name="StopBtn" Padding="4" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource StopGeometry}"  HorizontalAlignment="Stretch" Grid.Column="2" Click="StopBtn_Click" Margin="5,0,10,10" Content="停止"  Background="{DynamicResource BackgroundBrush}" FontSize="15"  Foreground="#FFFF2424" BorderBrush="#FFFF2424"/>
+                                            <Button x:Name="RefreshBtn" Padding="4" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource RefreshGeometry}" HorizontalAlignment="Stretch" Grid.Column="0" Click="RefreshBtn_Click" Margin="10,0,5,10" Content="刷新" Background="{DynamicResource BackgroundBrush}" FontSize="15" Foreground="#FF00C7B9" BorderBrush="#FF00C7B9"/>
+                                            <Button x:Name="StartBtn" Padding="4" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource StartGeometry}" HorizontalAlignment="Stretch" Grid.Column="1" Click="StartBtn_Click" Margin="5,0,5,10" Content="启动"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Foreground="#FF00ED66" BorderBrush="#FF00ED66"/>
+                                            <Button x:Name="StopBtn" Padding="4" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource StopGeometry}"  HorizontalAlignment="Stretch" Grid.Column="2" Click="StopBtn_Click" Margin="5,0,10,10" Content="停止"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Foreground="#FFFF2424" BorderBrush="#FFFF2424"/>
                                         </Grid>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition/>
                                                 <ColumnDefinition/>
                                             </Grid.ColumnDefinitions>
-                                            <Button x:Name="SetStartBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource SettingGeometry}" Click="SetStartBtn_Click"  Margin="10,0,5,10" HorizontalAlignment="Stretch" Content="开机自启"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FFB724FF" BorderBrush="#FFB724FF" VerticalContentAlignment="Center"/>
-                                            <Button x:Name="StopStartBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource SettingGeometry}" Grid.Column="1" Click="StopStartBtn_Click" Margin="5,0,10,10" HorizontalAlignment="Stretch" Content="停止自启"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FFB724FF" BorderBrush="#FFB724FF" VerticalContentAlignment="Center"/>
+                                            <Button x:Name="EnableAutoStartBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource SettingGeometry}" Click="EnableAutoStartBtn_Click"  Margin="10,0,5,10" HorizontalAlignment="Stretch" Content="开机自启"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FFB724FF" BorderBrush="#FFB724FF" VerticalContentAlignment="Center"/>
+                                            <Button x:Name="DisableAutoStartBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource SettingGeometry}" Grid.Column="1" Click="DisableAutoStartBtn_Click" Margin="5,0,10,10" HorizontalAlignment="Stretch" Content="取消自启"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FFB724FF" BorderBrush="#FFB724FF" VerticalContentAlignment="Center"/>
                                         </Grid>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition/>
                                                 <ColumnDefinition/>
                                             </Grid.ColumnDefinitions>
-                                            <Button x:Name="TaskbarIconRunBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource WindowsGeometry}" Click="TaskbarIconRunBtn_Click" Margin="10,0,5,10" HorizontalAlignment="Stretch" Content="托盘运行"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FF2100C3" BorderBrush="#FF2100C3" VerticalContentAlignment="Center"/>
+                                            <Button x:Name="MinimizeToTrayBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource WindowsGeometry}" Click="MinimizeToTrayBtn_Click" Margin="10,0,5,10" HorizontalAlignment="Stretch" Content="托盘运行"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FF2100C3" BorderBrush="#FF2100C3" VerticalContentAlignment="Center"/>
                                             <Button x:Name="ExitBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource ExitGeometry}" Grid.Column="1" Click="ExitBtn_Click" Margin="5,0,10,10" HorizontalAlignment="Stretch" Content="退出工具"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FFFF2424" BorderBrush="#FFFF2424" VerticalContentAlignment="Center"/>
                                         </Grid>
                                     </StackPanel>
@@ -678,7 +734,7 @@
                                                 <Viewbox Margin="10,10,10,0" Width="110" Height="110">
                                                     <hc:AnimationPath Data="{DynamicResource GithubGeometry}" Duration="00:00:08" Stretch="Uniform" StrokeThickness="40" Stroke="#FF1794F3" RepeatBehavior="Forever"/>
                                                 </Viewbox>
-                                                <TextBlock PreviewMouseDown="LinkText_PreviewMouseDown"  Margin="10,5,10,5" TextWrapping="Wrap" Text="https://github.com/racpast/SNIBypassGUI" FontSize="16" Foreground="#FF04ABD6" TextDecorations="Underline" FontFamily="Microsoft Tai Le" HorizontalAlignment="Center" Cursor="Hand"/>
+                                                <TextBlock PreviewMouseDown="LinkText_PreviewMouseDown"  Margin="10,5,10,5" TextWrapping="Wrap" Text="https://github.com/racpast/SNIBypassGUI" FontSize="16" Foreground="#FF04ABD6" TextDecorations="Underline" HorizontalAlignment="Center" Cursor="Hand"/>
                                                 <TextBlock Margin="10,0,10,10" TextWrapping="Wrap" Text="如果您喜欢这个项目，请在Github上为我点一颗Star，好让我知道有多少人从这个项目中受益！" TextAlignment="Center" FontSize="15" Foreground="#FF04ABD6"  HorizontalAlignment="Center"/>
                                             </StackPanel>
                                         </Border>
@@ -691,7 +747,7 @@
                                                 <RowDefinition/>
                                             </Grid.RowDefinitions>
                                             <Button x:Name="UpdateBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource UpdateGeometry}" Click="UpdateBtn_Click" Margin="10,10,5,10" HorizontalAlignment="Stretch" Content="更新数据"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FF2100C3" BorderBrush="#FF2100C3" VerticalContentAlignment="Center"/>
-                                            <Button x:Name="FeedbackBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource FeedbackGeometry}" Grid.Column="1" Click="FeedbackBtn_Click" Margin="5,10,10,10" HorizontalAlignment="Stretch" Content="联系我们"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FF2100C3" BorderBrush="#FF2100C3" VerticalContentAlignment="Center"/>
+                                            <Button x:Name="AutoCheckUpdateBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource FindGeometry}" Click="AutoCheckUpdateBtn_Click" Grid.Column="1" Margin="5,10,10,10" HorizontalAlignment="Stretch" Content="自动检查更新：关"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FF2100C3" BorderBrush="#FF2100C3" VerticalContentAlignment="Center"/>
                                         </Grid>
                                         <Button x:Name="CleanBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource CleanGeometry}" Click="CleanBtn_Click" Margin="10,0,10,10" HorizontalAlignment="Stretch" Content="清理临时文件 (0MB)" Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FF2100C3" BorderBrush="#FF2100C3" VerticalContentAlignment="Center"/>
                                         <Grid>
@@ -713,7 +769,7 @@
                                             <Grid.RowDefinitions>
                                                 <RowDefinition/>
                                             </Grid.RowDefinitions>
-                                            <Button x:Name="PixivIPPreferenceBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource ExperimentGeometry}" Click="PixivIPPreferenceBtn_Click" Margin="10,0,5,10" HorizontalAlignment="Stretch" Content="Pixiv IP优选：关"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FF2100C3" BorderBrush="#FF2100C3" VerticalContentAlignment="Center"/>
+                                            <Button x:Name="FeedbackBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource FeedbackGeometry}" Click="FeedbackBtn_Click" Margin="10,0,5,10" HorizontalAlignment="Stretch" Content="联系我们"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FF2100C3" BorderBrush="#FF2100C3" VerticalContentAlignment="Center"/>
                                             <Button x:Name="ResetBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource RestoreGeometry}" Grid.Column="1" Click="ResetBtn_Click" Margin="5,0,10,10" HorizontalAlignment="Stretch" Content="还原数据"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FF2100C3" BorderBrush="#FF2100C3" VerticalContentAlignment="Center"/>
                                         </Grid>
                                         <Grid>
@@ -724,8 +780,8 @@
                                             <Grid.RowDefinitions>
                                                 <RowDefinition/>
                                             </Grid.RowDefinitions>
-                                            <Button x:Name="DebugModeBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource DebugGeometry}" hc:IconElement.Height="25" hc:IconElement.Width="25" Click="DebugModeBtn_Click" Height="50" Margin="10,0,5,10" HorizontalAlignment="Stretch" Content="调试模式：&#x000A;关" HorizontalContentAlignment="Center" Background="{DynamicResource BackgroundBrush}" FontSize="15"  Foreground="#FF04ABD6" BorderBrush="#FF04ABD6" VerticalContentAlignment="Center"/>
-                                            <Button x:Name="GUIDebugBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource LogGeometry}" hc:IconElement.Height="25" hc:IconElement.Width="25" Grid.Column="1" IsEnabled="False" Click="GUIDebugBtn_Click" Height="50" Margin="5,0,10,10" HorizontalAlignment="Stretch" Content="GUI调试：&#x000A;关" HorizontalContentAlignment="Center" Background="{DynamicResource BackgroundBrush}" FontSize="15"  Foreground="#FF04ABD6" BorderBrush="#FF04ABD6" VerticalContentAlignment="Center"/>
+                                            <Button x:Name="DebugModeBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource DebugGeometry}" hc:IconElement.Height="25" hc:IconElement.Width="25" Click="DebugModeBtn_Click" Height="50" Margin="10,0,5,10" HorizontalAlignment="Stretch" Content="调试模式：&#x000A;关" HorizontalContentAlignment="Center" Background="{DynamicResource BackgroundBrush}" FontSize="15" Foreground="#FF04ABD6" BorderBrush="#FF04ABD6" VerticalContentAlignment="Center"/>
+                                            <Button x:Name="GUIDebugBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource LogGeometry}" hc:IconElement.Height="25" hc:IconElement.Width="25" Grid.Column="1" IsEnabled="False" Click="GUIDebugBtn_Click" Height="50" Margin="5,0,10,10" HorizontalAlignment="Stretch" Content="GUI调试：&#x000A;关" HorizontalContentAlignment="Center" Background="{DynamicResource BackgroundBrush}" FontSize="15" Foreground="#FF04ABD6" BorderBrush="#FF04ABD6" VerticalContentAlignment="Center"/>
                                         </Grid>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -735,8 +791,8 @@
                                             <Grid.RowDefinitions>
                                                 <RowDefinition/>
                                             </Grid.RowDefinitions>
-                                            <Button x:Name="AcrylicDebugBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource DNSGeometry}" hc:IconElement.Height="25" hc:IconElement.Width="25" IsEnabled="False" Click="AcrylicDebugBtn_Click" Height="50" Margin="5,0,10,10" HorizontalAlignment="Stretch" Content="DNS调试：&#x000A;关" HorizontalContentAlignment="Center" Background="{DynamicResource BackgroundBrush}" FontSize="15"  Foreground="#FF04ABD6" BorderBrush="#FF04ABD6" VerticalContentAlignment="Center"/>
-                                            <Button x:Name="NginxLogTracingBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource DomainNameGeometry}" hc:IconElement.Height="25" Grid.Column="1" hc:IconElement.Width="25" IsEnabled="False" Click="NginxLogTracing_Click" Height="50" Margin="10,0,5,10" HorizontalAlignment="Stretch" Content="主服务&#x000A;日志追踪" HorizontalContentAlignment="Center" Background="{DynamicResource BackgroundBrush}" FontSize="15"  Foreground="#408e43" BorderBrush="#408e43" VerticalContentAlignment="Center"/>
+                                            <Button x:Name="AcrylicDebugBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource DNSGeometry}" hc:IconElement.Height="25" hc:IconElement.Width="25" IsEnabled="False" Click="AcrylicDebugBtn_Click" Height="50" Margin="10,0,5,10" HorizontalAlignment="Stretch" Content="DNS调试：&#x000A;关" HorizontalContentAlignment="Center" Background="{DynamicResource BackgroundBrush}" FontSize="15" Foreground="#FF04ABD6" BorderBrush="#FF04ABD6" VerticalContentAlignment="Center"/>
+                                            <Button x:Name="TraceNginxLogBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource DomainNameGeometry}" hc:IconElement.Height="25" Grid.Column="1" hc:IconElement.Width="25" IsEnabled="False" Click="TraceNginxLogBtn_Click" Height="50" Margin="5,0,10,10" HorizontalAlignment="Stretch" Content="主服务&#x000A;日志追踪" HorizontalContentAlignment="Center" Background="{DynamicResource BackgroundBrush}" FontSize="15" Foreground="#408e43" BorderBrush="#408e43" VerticalContentAlignment="Center"/>
                                         </Grid>
                                         <Grid>
                                             <Grid.ColumnDefinitions>

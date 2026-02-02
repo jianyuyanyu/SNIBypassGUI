@@ -119,34 +119,31 @@
   </resheader>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
   <data name="4701" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\imgs\4701.jpg;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\Resources\Images\4701.jpg;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="4702" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\imgs\4702.jpg;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\Resources\Images\4702.jpg;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="4703" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\imgs\4703.jpg;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\Resources\Images\4703.jpg;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="AcrylicConfiguration" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\dns\AcrylicConfiguration.ini;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="AcrylicHosts" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\dns\AcrylicHosts.txt;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="AcrylicHosts_All" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\AcrylicHosts_All.dat;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\Resources\Acrylic\AcrylicConfiguration.ini;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="AcrylicService" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\dns\AcrylicService.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\Resources\Acrylic\AcrylicService.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="ca" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\ca.cer;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="nginx" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\nginx\nginx.conf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\Resources\Nginx\nginx.conf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="ProxyRules" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\ProxyRules.json;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="SNIBypass" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\nginx\SNIBypass.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\Resources\Nginx\SNIBypass.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="SNIBypassCrt" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\SNIBypassCrt.crt;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
@@ -154,10 +151,7 @@
   <data name="SNIBypassKey" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\SNIBypassKey.key;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
-  <data name="SwitchData" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\SwitchData.json;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
   <data name="tail" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\tail.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\Resources\Tail.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
 </root>
