@@ -11,7 +11,7 @@
              Loaded="Window_Loaded"
              Title="SNIBypassGUI" Height="500" Width="800" 
              AllowsTransparency="True" ResizeMode="NoResize" 
-             Closing="Window_Closing" Background="Transparent" 
+             Closing="Window_Closing" Background="Transparent"
              WindowStartupLocation="CenterScreen" WindowStyle="None" Opacity="0" d:Opacity="1"
              FontFamily="{StaticResource LXGWWenKai-Regular}" ShowInTaskbar="False">
     <Window.Resources>

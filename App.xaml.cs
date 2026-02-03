@@ -1,11 +1,15 @@
-﻿using System;
-using System.Windows;
-using System.Windows.Threading;
-using Microsoft.Win32;
+﻿using Microsoft.Win32;
+using SNIBypassGUI.Common.Network;
 using SNIBypassGUI.Common.System;
+using SNIBypassGUI.Common.Text;
 using SNIBypassGUI.Common.Tools;
 using SNIBypassGUI.Consts;
-using SNIBypassGUI.Services; 
+using SNIBypassGUI.Services;
+using SNIBypassGUI.Views;
+using System;
+using System.Linq;
+using System.Windows;
+using System.Windows.Threading;
 using static SNIBypassGUI.Common.LogManager;
 
 namespace SNIBypassGUI
@@ -58,6 +62,45 @@ namespace SNIBypassGUI
                 if (releaseValue != null && (int)releaseValue >= RequiredReleaseKey) return true;
             }
             return false;
+        }
+
+        private async void App_Startup(object sender, StartupEventArgs e)
+        {
+            var startupService = new StartupService();
+            startupService.CheckSingleInstance();
+            startupService.InitializeDirectoriesAndFiles();
+
+            await ConfigManager.Instance.LoadAsync();
+
+            string[] args = e.Args;
+
+            if (ArgumentUtils.ContainsArgument(args, AppConsts.CleanUpArgument))
+            {
+                var tempStore = ConfigManager.Instance.Settings.TemporaryData;
+                if (tempStore != null && tempStore.Count > 0)
+                {
+                    var proxyService = new ProxyService();
+                    var adapters = await NetworkAdapterUtils.GetNetworkAdaptersAsync(NetworkAdapterUtils.ScopeNeeded.FriendlyNameNotNullOnly);
+
+                    foreach (var adapterName in tempStore.Keys.ToList())
+                    {
+                        var adapter = adapters.FirstOrDefault(a => a.FriendlyName == adapterName);
+                        if (adapter != null)
+                            await proxyService.RestoreAdapterDNSAsync(adapter, true);
+                    }
+                    await ConfigManager.Instance.SaveNowAsync();
+                }
+
+                Shutdown();
+                return;
+            }
+
+            var mainWindow = new MainWindow();
+
+            if (ArgumentUtils.ContainsArgument(args, AppConsts.AutoStartArgument))
+                mainWindow.RunInSilentMode();
+            else
+                mainWindow.Show();
         }
 
         private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

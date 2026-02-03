@@ -61,7 +61,11 @@ namespace SNIBypassGUI.Views
         private static readonly Timer _reloadDebounceTimer = new(500.0) { AutoReset = false };
 
         private volatile bool _isSwitchingAdapter = false;
+        private bool _isSilentStartup = false;
         private bool _isBusy = false;
+
+        private UpdateManifest _pendingUpdateManifest;
+        private bool _pendingPortConflict = false;
 
         public ICommand TaskbarIconLeftClickCommand { get; }
         public static ImageSwitcherService BackgroundService { get; private set; }
@@ -73,9 +77,6 @@ namespace SNIBypassGUI.Views
         public MainWindow()
         {
             InitializeComponent();
-
-            _startupService.CheckSingleInstance();
-            _startupService.InitializeDirectoriesAndFiles();
 
             DataContext = this;
 
@@ -89,80 +90,66 @@ namespace SNIBypassGUI.Views
             TrayIconUtils.RefreshNotification();
         }
 
+        public void RunInSilentMode()
+        {
+            _isSilentStartup = true;
+            ShowInTaskbar = false;
+            Visibility = Visibility.Hidden;
+            _ = InitializeAppAsync(true);
+        }
+
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            // Load configuration first
-            await ConfigManager.Instance.LoadAsync();
+            if (!_isSilentStartup)
+                await InitializeAppAsync(false);
+        }
 
-            // Apply loaded config to UI controls
+        private async Task InitializeAppAsync(bool isSilent)
+        {
+            if (ConfigManager.Instance.Settings == null) await ConfigManager.Instance.LoadAsync();
             ApplySettings();
-
-            string[] cliargs = Environment.GetCommandLineArgs();
-
-            // Cleanup Mode Check
-            if (ArgumentUtils.ContainsArgument(cliargs, AppConsts.CleanUpArgument))
-            {
-                WriteLog("Startup in Cleanup Mode. Restoring settings and exiting...", LogLevel.Info);
-                Exit(true);
-                return;
-            }
-
-            TaskbarIcon.Visibility = Visibility.Visible;
-            WindowTitle.Text = "SNIBypassGUI " + AppConsts.CurrentVersion;
-
-            _serviceStatusTimer.Tick += (_, _) => UpdateServiceStatus();
-
-            _tempFilesTimer.Tick += (_, _) => UpdateTempFilesSize();
-            _tempFilesTimer.Start();
-
-            _adapterSwitchTimer.Tick += AdapterAutoSwitchTimer_Tick;
-            if (ConfigManager.Instance.Settings.Program.AutoSwitchAdapter)
-                _adapterSwitchTimer.Start();
-
-            MainTabControl.SelectionChanged += TabControl_SelectionChanged;
-
-            // Watch for external JSON changes
-            ConfigWatcher.Path = PathConsts.DataDirectory;
-            ConfigWatcher.Changed += OnConfigChanged;
-            ConfigWatcher.EnableRaisingEvents = true;
-            _reloadDebounceTimer.Elapsed += OnReloadDebounceTimerElapsed;
 
             await AddSwitchesToList();
             await InitializeSwitchConfig();
 
-            UpdateServiceStatus();
+            if (isSilent) await Task.Delay(1000);
 
-            if (!CertificateUtils.IsCertificateInstalled(AppConsts.CertificateThumbprint))
+            await InitializeAdapterSelection();
+            await CheckAndInstallService();
+
+            if (ArgumentUtils.ContainsArgument(Environment.GetCommandLineArgs(), AppConsts.CleanUpArgument))
             {
-                WriteLog($"Certificate {AppConsts.CertificateThumbprint} not found. Installing...", LogLevel.Info);
-                CertificateUtils.InstallCertificate(PathConsts.CA);
+                Application.Current.Shutdown();
+                return;
             }
 
-            await CheckAndInstallService();
-            await InitializeAdapterSelection();
-
-            ShowAndInitWindow(cliargs);
-
-            _startupService.EnsureTaskScheduler();
-            await UpdateYiyan();
-
-            if (ConfigManager.Instance.Settings.Program.AutoCheckUpdate)
-                await CheckUpdate();
-        }
-
-        private void ShowAndInitWindow(string[] args)
-        {
-            if (ArgumentUtils.ContainsArgument(args, AppConsts.AutoStartArgument))
+            if (isSilent)
             {
-                WriteLog("Auto-start triggered via Task Scheduler. Starting minimized.", LogLevel.Info);
-                _ = ExecuteStartServiceAsync(true);
+                bool started = await ExecuteStartServiceAsync(true);
+                if (started)
+                    TaskbarIcon.ShowBalloonTip("SNIBypassGUI 已启动", "服务已在后台成功运行，正在为您保驾护航喵~ (≧◡≦)", BalloonIcon.Info);
+                else
+                    TaskbarIcon.ShowBalloonTip("启动遇到问题", "后台服务启动失败，请打开主界面查看详细原因。", BalloonIcon.Error);
+
+                if (ConfigManager.Instance.Settings.Program.AutoCheckUpdate)
+                    await CheckUpdate(true);
             }
             else
             {
+                ShowInTaskbar = true;
+
                 Show();
-                AnimateWindow(0.0, 1.0, () => { Activate(); ShowContent(); });
+                AnimateWindow(0.0, 1.0, () =>
+                {
+                    Activate();
+                    ShowContent();
+                });
+
+                if (ConfigManager.Instance.Settings.Program.AutoCheckUpdate)
+                    await CheckUpdate(false);
             }
-            ShowInTaskbar = true;
+
+            TaskbarIcon.Visibility = Visibility.Visible;
         }
 
         private async Task InitializeSwitchConfig()
@@ -199,28 +186,20 @@ namespace SNIBypassGUI.Views
             _serviceStatusTimer.Stop(); // Pause timer to prevent status overwrite
             SetBusyState(true);
 
-            bool success = false;
-
             try
             {
-                if (string.IsNullOrEmpty(AdaptersCombo.SelectedItem?.ToString()))
+                string targetAdapterName = silent 
+                    ? ConfigManager.Instance.Settings.Program.SpecifiedAdapter
+                    : AdaptersCombo.SelectedItem?.ToString();
+
+                if (string.IsNullOrEmpty(targetAdapterName))
                 {
-                    if (!silent) MessageBox.Show("请先在下拉框中选择当前正在使用的适配器！", "提示", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+                    if (!silent) MessageBox.Show("请先选择适配器...", "提示", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+                    else WriteLog("Silent start failed: No adapter specified in config.", LogLevel.Warning);
                     return false;
                 }
-
-                if (NetworkUtils.IsPortInUse(80, false) || NetworkUtils.IsPortInUse(443, false))
-                {
-                    if (!silent)
-                    {
-                        if (MessageBox.Show("检测到系统 80 或 443 端口被占用，主服务可能无法正常运行，但仍然会尝试继续启动。\n点击“是”将为您展示有关帮助。", "警告", MessageBoxButton.YesNo, MessageBoxImage.Exclamation, MessageBoxResult.None) == MessageBoxResult.Yes)
-                            ProcessUtils.StartProcess("https://github.com/racpast/SNIBypassGUI/wiki/❓%EF%B8%8F-使用时遇到问题#当您的主服务运行后自动停止，或遇到80端口被占用的提示时", "", "", true, false);
-                    }
-                    else WriteLog("Ports 80/443 in use. Attempting start anyway.", LogLevel.Warning);
-                }
-
+                await CheckAndHandlePortConflicts(silent);
                 await _proxyService.UpdateHostsFromConfigAsync();
-
                 await _proxyService.StartAsync(status =>
                 {
                     Dispatcher.Invoke(() =>
@@ -231,12 +210,13 @@ namespace SNIBypassGUI.Views
                 });
 
                 await Task.Run(() => NetworkUtils.FlushDNS());
-                success = true;
+                return true;
             }
             catch (Exception ex)
             {
                 WriteLog($"Failed to start service: {ex.Message}", LogLevel.Error, ex);
                 if (!silent) MessageBox.Show($"启动服务失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
             }
             finally
             {
@@ -244,8 +224,57 @@ namespace SNIBypassGUI.Views
                 UpdateServiceStatus();
                 _serviceStatusTimer.Start();
             }
+        }
 
-            return success;
+        private async Task CheckAndHandlePortConflicts(bool silent)
+        {
+            bool portInUse = NetworkUtils.IsPortInUse(80, false) || NetworkUtils.IsPortInUse(443, false);
+
+            if (portInUse)
+            {
+                if (silent)
+                {
+                    _pendingPortConflict = true;
+                    WriteLog("Ports 80/443 in use. Marked for UI prompt.", LogLevel.Warning);
+                    TaskbarIcon.ShowBalloonTip("端口占用提示", "检测到 80/443 端口被占用，服务可能受限。\n点击此处打开主界面解决。", BalloonIcon.Warning);
+                }
+                else
+                {
+                    var result = MessageBox.Show("检测到 80 或 443 端口被占用，这通常是 IIS、Apache 或其他 Web 服务引起的。\n\n是否尝试自动结束占用端口的进程？\n(选择“否”将尝试强制启动，但可能会失败)",
+                        "端口冲突", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        await Task.Run(() => FreePorts());
+                    }
+                }
+            }
+        }
+
+        private void FreePorts()
+        {
+            try
+            {
+                string[] ports = { "80", "443" };
+                foreach (var port in ports)
+                {
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = "cmd.exe",
+                        Arguments = $"/c for /f \"tokens=5\" %a in ('netstat -aon ^| findstr \":{port}\"') do taskkill /f /pid %a",
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        CreateNoWindow = true,
+                        UseShellExecute = true,
+                        Verb = "runas"
+                    };
+                    Process.Start(psi)?.WaitForExit(2000);
+                }
+                WriteLog("Attempted to free ports 80/443.", LogLevel.Info);
+            }
+            catch (Exception ex)
+            {
+                WriteLog($"Failed to auto-kill port processes: {ex.Message}", LogLevel.Error, ex);
+            }
         }
 
         private async Task<bool> ExecuteStopServiceAsync(bool silent)
@@ -947,7 +976,7 @@ namespace SNIBypassGUI.Views
             }
         }
 
-        private async Task CheckUpdate()
+        private async Task CheckUpdate(bool silent)
         {
             try
             {
@@ -961,7 +990,7 @@ namespace SNIBypassGUI.Views
                     if (manifest.Version != AppConsts.CurrentVersion)
                     {
                         needUpdate = true;
-                        tipMessage = $"发现主程序新版本 {manifest.Version}！";
+                        tipMessage = $"发现主程序新版本 {manifest.Version}";
                     }
                     else if (manifest.Assets != null)
                     {
@@ -979,17 +1008,34 @@ namespace SNIBypassGUI.Views
                         if (assetsChanged)
                         {
                             needUpdate = true;
-                            tipMessage = "发现新的配置或数据文件更新！";
+                            tipMessage = "发现新的配置或数据文件更新";
                         }
                     }
 
                     if (needUpdate)
                     {
-                        Dispatcher.Invoke(() =>
+                        if (!silent)
                         {
-                            if (MessageBox.Show(tipMessage + "\n是否立即更新？", "发现更新", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.None) == MessageBoxResult.Yes)
-                                UpdateBtn.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
-                        });
+                            Dispatcher.Invoke(() =>
+                            {
+                                if (MessageBox.Show(tipMessage + "！\n是否立即更新？", "发现更新", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.None) == MessageBoxResult.Yes)
+                                    UpdateBtn.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+                            });
+                        }
+                        else
+                        {
+                            _pendingUpdateManifest = manifest;
+
+                            TaskbarIcon.ShowBalloonTip("发现更新", $"{tipMessage}，点击查看详情\n(ง๑ •̀_•́)ง", BalloonIcon.Info);
+
+                            void clickHandler(object s, RoutedEventArgs e)
+                            {
+                                TaskbarIcon.TrayBalloonTipClicked -= clickHandler;
+                                ShowMainFromTray();
+                                MainTabControl.SelectedIndex = 2;
+                            }
+                            TaskbarIcon.TrayBalloonTipClicked += clickHandler;
+                        }
                     }
                 }
             }
@@ -1227,7 +1273,7 @@ namespace SNIBypassGUI.Views
             {
                 Hide();
                 HideContent();
-                TaskbarIcon.ShowBalloonTip("已最小化运行", "点击托盘图标显示主界面或右键显示菜单。", BalloonIcon.Info);
+                TaskbarIcon.ShowBalloonTip("已最小化运行", "点击托盘图标显示主界面或右键显示菜单\nε٩(๑> ₃ <)۶з", BalloonIcon.Info);
                 MinimizeToTrayBtn.IsEnabled = true;
             });
         }
@@ -1416,6 +1462,37 @@ namespace SNIBypassGUI.Views
             foreach (Window window in Application.Current.Windows)
                 if (window is CustomBackgroundWindow) return true;
             return false;
+        }
+
+        private void ShowMainFromTray()
+        {
+            _isSilentStartup = false;
+            ShowInTaskbar = true;
+            Visibility = Visibility.Visible;
+            Show();
+            AnimateWindow(0.0, 1.0, () => { Activate(); ShowContent(); ProcessPendingStates(); });
+        }
+
+        private void ProcessPendingStates()
+        {
+            if (_pendingPortConflict)
+            {
+                _pendingPortConflict = false;
+                _ = CheckAndHandlePortConflicts(false);
+            }
+
+            if (_pendingUpdateManifest != null)
+            {
+                var manifest = _pendingUpdateManifest;
+                _pendingUpdateManifest = null;
+
+                string tipMessage = manifest.Version != AppConsts.CurrentVersion
+                    ? $"发现主程序新版本 {manifest.Version}"
+                    : "发现新的配置或数据文件更新";
+
+                if (MessageBox.Show(tipMessage + "！\n是否立即更新？", "发现更新", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.None) == MessageBoxResult.Yes)
+                    UpdateBtn.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            }
         }
 
         private void AnimateWindow(double from, double to, Action onCompleted = null)
