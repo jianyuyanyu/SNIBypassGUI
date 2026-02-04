@@ -19,7 +19,6 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Resources\icon.ico</ApplicationIcon>
     <SignManifests>false</SignManifests>
-    <!-- 此项目中使用了C# 8.0中的递归模式和using 声明，C# 9.0中的创建目标类型对象和"not"模式以及C# 12.0中的集合表达式和主构造函数，但这些都是纯编译时特性，直接忽略错误，但应该避免使用依赖运行时的特性，例如异步流和默认接口方法 -->
     <LangVersion>preview</LangVersion>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
@@ -39,21 +38,6 @@
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
   </PropertyGroup>
-  <!-- FodyWeavers.xml -->
-  <Target Name="SetFodyWeavers" BeforeTargets="BeforeBuild">
-    <WriteLinesToFile File="FodyWeavers.xml" Lines="@(FodyWeaversContent)" Overwrite="true" WriteOnlyWhenDifferent="true" />
-  </Target>
-  <!-- Release -->
-  <ItemGroup Condition=" '$(Configuration)' == 'Release' ">
-    <FodyWeaversContent Include="&#xD;&#xA;    &lt;Weavers xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xsi:noNamespaceSchemaLocation=&quot;FodyWeavers.xsd&quot;&gt;&#xD;&#xA;      &lt;Costura /&gt;&#xD;&#xA;    &lt;/Weavers&gt;" />
-  </ItemGroup>
-  <!-- Debug -->
-  <ItemGroup Condition=" '$(Configuration)' == 'Debug' ">
-    <FodyWeaversContent Include="&#xD;&#xA;    &lt;Weavers xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xsi:noNamespaceSchemaLocation=&quot;FodyWeavers.xsd&quot;&gt;&#xD;&#xA;      &lt;Costura&gt;&#xD;&#xA;        &lt;ExcludeAssemblies&gt;&#xD;&#xA;          Newtonsoft.Json&#xD;&#xA;          Microsoft.Win32.TaskScheduler&#xD;&#xA;          Hardcodet.NotifyIcon.Wpf&#xD;&#xA;          ImageCropper&#xD;&#xA;          HandyControl&#xD;&#xA;        &lt;/ExcludeAssemblies&gt;&#xD;&#xA;      &lt;/Costura&gt;&#xD;&#xA;    &lt;/Weavers&gt;" />
-  </ItemGroup>
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="powershell -Command &quot;(Get-FileHash '$(TargetPath)' -Algorithm SHA256).Hash.ToLower().Trim() | Out-File -Encoding ASCII -NoNewline '$(TargetDir)sha256.txt'&quot;" />
-  </Target>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
@@ -76,15 +60,13 @@
     <UseWinFormsOutOfProcDesigner>False</UseWinFormsOutOfProcDesigner>
     <DebugSymbols>true</DebugSymbols>
     <AllowedReferenceRelatedFileExtensions>
-      <!-- Prevent default XML and PDB files copied to output in RELEASE. 
-           Only *.fuck files will be included, which doesn't exist in my case.
-       -->
       .fuck
     </AllowedReferenceRelatedFileExtensions>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
+  
   <ItemGroup>
     <Reference Include="Costura, Version=6.0.0.0, Culture=neutral, PublicKeyToken=9919ef960d84173d, processorArchitecture=MSIL">
       <HintPath>packages\Costura.Fody.6.0.0\lib\netstandard2.0\Costura.dll</HintPath>
@@ -106,143 +88,162 @@
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>packages\Newtonsoft.Json.13.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
     <Reference Include="System" />
+    <Reference Include="System.Core" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Management" />
+    <Reference Include="System.Net.Http" />
     <Reference Include="System.Numerics" />
     <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Net.Http" />
     <Reference Include="System.Xaml">
       <RequiredTargetFramework>4.0</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
     <Reference Include="WindowsBase" />
-    <Reference Include="PresentationCore" />
-    <Reference Include="PresentationFramework" />
   </ItemGroup>
+
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Resource Include="Resources\Fonts\LXGWWenKai-Regular.ttf" />
-    <None Include="Resources\ProxyRules.json" />
-    <None Include="Resources\Tail.exe" />
-    <Page Include="Views\CustomBackgroundWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Compile Include="Behaviors\ToggleButtonAttach.cs" />
     <Compile Include="Common\Commands\AsyncCommand.cs" />
+    <Compile Include="Common\Extensions\BooleanExtensions.cs" />
+    <Compile Include="Common\Extensions\LongExtensions.cs" />
+    <Compile Include="Common\Extensions\ProcessExtensions.cs" />
+    <Compile Include="Common\Extensions\StringExtensions.cs" />
     <Compile Include="Common\Interop\Advapi32.cs" />
+    <Compile Include="Common\Interop\Dnsapi.cs" />
     <Compile Include="Common\Interop\Iphlpapi.cs" />
     <Compile Include="Common\Interop\Kernel32.cs" />
-    <Compile Include="Common\Interop\Dnsapi.cs" />
     <Compile Include="Common\Interop\User32.cs" />
+    <Compile Include="Common\IO\FileUtils.cs" />
+    <Compile Include="Common\IO\IniUtils.cs" />
+    <Compile Include="Common\LogManager.cs" />
+    <Compile Include="Common\Network\AcrylicUtils.cs" />
+    <Compile Include="Common\Network\NetworkAdapterUtils.cs" />
+    <Compile Include="Common\Network\NetworkUtils.cs" />
     <Compile Include="Common\Network\PortUtils.cs" />
+    <Compile Include="Common\Security\CertificateUtils.cs" />
+    <Compile Include="Common\System\CmdUtils.cs" />
+    <Compile Include="Common\System\ProcessUtils.cs" />
+    <Compile Include="Common\System\ServiceUtils.cs" />
+    <Compile Include="Common\Text\ArgumentUtils.cs" />
+    <Compile Include="Common\Text\StringUtils.cs" />
+    <Compile Include="Common\Tools\TailUtils.cs" />
+    <Compile Include="Common\UI\ImageUtils.cs" />
     <Compile Include="Common\UI\TrayIconUtils.cs" />
+    <Compile Include="Consts\AppConsts.cs" />
+    <Compile Include="Consts\CollectionConsts.cs" />
     <Compile Include="Consts\ConfigConsts.cs" />
+    <Compile Include="Consts\LinksConsts.cs" />
+    <Compile Include="Consts\PathConsts.cs" />
     <Compile Include="Models\AppConfig.cs" />
     <Compile Include="Models\ImageItem.cs" />
+    <Compile Include="Models\NetworkAdapter.cs" />
     <Compile Include="Models\SwitchItem.cs" />
     <Compile Include="Models\UpdateManifest.cs" />
-    <Compile Include="Common\Text\ArgumentUtils.cs" />
-    <Compile Include="Common\Extensions\BooleanExtensions.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-    <Compile Include="Services\ConfigManager.cs" />
-    <Compile Include="Services\ImageSwitcherService.cs" />
-    <Compile Include="Common\UI\ImageUtils.cs" />
-    <Compile Include="Common\Extensions\LongExtensions.cs" />
-    <Compile Include="Common\Extensions\ProcessExtensions.cs" />
-    <Compile Include="Common\Extensions\StringExtensions.cs" />
-    <Compile Include="Common\Text\StringUtils.cs" />
-    <Compile Include="Common\Tools\TailUtils.cs" />
-    <Compile Include="Services\ProxyService.cs" />
-    <Compile Include="Services\StartupService.cs" />
-    <Compile Include="Views\CustomBackgroundWindow.xaml.cs">
-      <DependentUpon>CustomBackgroundWindow.xaml</DependentUpon>
-    </Compile>
-    <Page Include="Views\MainWindow.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Compile Include="Views\MainWindow.xaml.cs">
-      <DependentUpon>MainWindow.xaml</DependentUpon>
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Properties\AssemblyInfo.cs">
-      <SubType>Code</SubType>
     </Compile>
     <Compile Include="Properties\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
+    <Compile Include="Services\ConfigManager.cs" />
+    <Compile Include="Services\ImageSwitcherService.cs" />
+    <Compile Include="Services\ProxyService.cs" />
+    <Compile Include="Services\StartupService.cs" />
+    <Compile Include="Views\CustomBackgroundWindow.xaml.cs">
+      <DependentUpon>CustomBackgroundWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\MainWindow.xaml.cs">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Include="Views\CustomBackgroundWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\MainWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Images\4701.jpg" />
+    <Resource Include="Resources\Images\4702.jpg" />
+    <Resource Include="Resources\Images\4703.jpg" />
+    <Resource Include="Resources\Fonts\LXGWWenKai-Regular.ttf" />
+    <Resource Include="Resources\icon.ico" />
+    <Resource Include="Resources\Images\MenuBkg.png" />
+    <Resource Include="Resources\Nginx\nginx.conf" />
+    <Resource Include="Resources\Nginx\SNIBypass.exe" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.manifest" />
+    <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
-    <Compile Include="Models\NetworkAdapter.cs" />
-    <Compile Include="Consts\AppConsts.cs" />
-    <Compile Include="Consts\CollectionConsts.cs" />
-    <Compile Include="Consts\LinksConsts.cs" />
-    <Compile Include="Consts\PathConsts.cs" />
+    <None Include="Resources\Acrylic\AcrylicConfiguration.ini" />
+    <None Include="Resources\Acrylic\AcrylicService.exe" />
     <None Include="Resources\ca.cer" />
+    <None Include="Resources\ProxyRules.json" />
     <None Include="Resources\SNIBypassCrt.crt" />
     <None Include="Resources\SNIBypassKey.key" />
-    <Resource Include="Resources\Nginx\nginx.conf" />
-    <Resource Include="Resources\icon.ico" />
-    <Resource Include="Resources\Nginx\SNIBypass.exe" />
-    <None Include="Resources\Acrylic\AcrylicService.exe" />
-    <None Include="Resources\Acrylic\AcrylicConfiguration.ini" />
-    <Resource Include="Resources\Images\MenuBkg.png" />
-    <Resource Include="Resources\Images\4701.jpg" />
-    <Resource Include="Resources\Images\4702.jpg" />
-    <Resource Include="Resources\Images\4703.jpg" />
-    <Content Include="Libraries\ImageCropper.dll" />
-    <Compile Include="Common\Network\AcrylicUtils.cs" />
-    <Compile Include="Common\Security\CertificateUtils.cs" />
-    <Compile Include="Common\System\CmdUtils.cs" />
-    <Compile Include="Common\IO\FileUtils.cs" />
-    <Compile Include="Common\IO\IniUtils.cs" />
-    <Compile Include="Common\LogManager.cs" />
-    <Compile Include="Common\Network\NetworkAdapterUtils.cs" />
-    <Compile Include="Common\Network\NetworkUtils.cs" />
-    <Compile Include="Common\System\ProcessUtils.cs" />
-    <Compile Include="Common\System\ServiceUtils.cs" />
-    <None Include="app.manifest" />
-    <None Include="packages.config" />
+    <None Include="Resources\Tail.exe" />
   </ItemGroup>
   <ItemGroup>
-    <BootstrapperPackage Include=".NETFramework,Version=v4.7.2">
-      <Visible>False</Visible>
-      <ProductName>Microsoft .NET Framework 4.7.2 %28x86 和 x64%29</ProductName>
-      <Install>true</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.5 SP1</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
+    <Content Include="Libraries\ImageCropper.dll" />
   </ItemGroup>
+
+  <Target Name="SetFodyWeavers" BeforeTargets="BeforeBuild">
+    <ItemGroup Condition=" '$(Configuration)' == 'Release' ">
+      <FodyWeaversContent Include="&#xD;&#xA;    &lt;Weavers xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xsi:noNamespaceSchemaLocation=&quot;FodyWeavers.xsd&quot;&gt;&#xD;&#xA;      &lt;Costura /&gt;&#xD;&#xA;    &lt;/Weavers&gt;" />
+    </ItemGroup>
+    <ItemGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <FodyWeaversContent Include="&#xD;&#xA;    &lt;Weavers xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xsi:noNamespaceSchemaLocation=&quot;FodyWeavers.xsd&quot;&gt;&#xD;&#xA;      &lt;Costura&gt;&#xD;&#xA;        &lt;ExcludeAssemblies&gt;&#xD;&#xA;          Newtonsoft.Json&#xD;&#xA;          Microsoft.Win32.TaskScheduler&#xD;&#xA;          Hardcodet.NotifyIcon.Wpf&#xD;&#xA;          ImageCropper&#xD;&#xA;          HandyControl&#xD;&#xA;        &lt;/ExcludeAssemblies&gt;&#xD;&#xA;      &lt;/Costura&gt;&#xD;&#xA;    &lt;/Weavers&gt;" />
+    </ItemGroup>
+    <WriteLinesToFile File="FodyWeavers.xml" Lines="@(FodyWeaversContent)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+  </Target>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="powershell -Command &quot;(Get-FileHash '$(TargetPath)' -Algorithm SHA256).Hash.ToLower().Trim() | Out-File -Encoding ASCII -NoNewline '$(TargetDir)sha256.txt'&quot;" />
+  </Target>
+  
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>

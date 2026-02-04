@@ -66,7 +66,7 @@ namespace SNIBypassGUI.Common.System
             IntPtr scm = OpenSCManager(null, null, SC_MANAGER_ALL_ACCESS);
             if (scm == IntPtr.Zero)
             {
-                WriteLog($"Failed to connect to Service Control Manager (SCM): {Marshal.GetLastWin32Error()}", LogLevel.Error);
+                WriteLog($"Failed to connect to SCM: {Marshal.GetLastWin32Error()}", LogLevel.Error);
                 return false;
             }
 
@@ -347,7 +347,7 @@ namespace SNIBypassGUI.Common.System
             }
             catch (Exception ex)
             {
-                WriteLog($"Failed to get binary path for service {serviceName}: {ex.Message}", LogLevel.Debug);
+                WriteLog($"Failed to get binary path for service {serviceName}.", LogLevel.Debug, ex);
             }
             return null;
         }

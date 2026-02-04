@@ -1,4 +1,8 @@
-﻿using Microsoft.Win32;
+﻿using System;
+using System.Linq;
+using System.Windows;
+using System.Windows.Threading;
+using Microsoft.Win32;
 using SNIBypassGUI.Common.Network;
 using SNIBypassGUI.Common.System;
 using SNIBypassGUI.Common.Text;
@@ -6,10 +10,6 @@ using SNIBypassGUI.Common.Tools;
 using SNIBypassGUI.Consts;
 using SNIBypassGUI.Services;
 using SNIBypassGUI.Views;
-using System;
-using System.Linq;
-using System.Windows;
-using System.Windows.Threading;
 using static SNIBypassGUI.Common.LogManager;
 
 namespace SNIBypassGUI
@@ -70,8 +70,6 @@ namespace SNIBypassGUI
             startupService.CheckSingleInstance();
             startupService.InitializeDirectoriesAndFiles();
 
-            await ConfigManager.Instance.LoadAsync();
-
             string[] args = e.Args;
 
             if (ArgumentUtils.ContainsArgument(args, AppConsts.CleanUpArgument))
@@ -105,7 +103,7 @@ namespace SNIBypassGUI
         private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
             WriteLog("Unhandled Dispatcher Exception!", LogLevel.Error, e.Exception);
-            MessageBox.Show($"遇到未处理的异常：{e.Exception}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"遇到未处理的异常：{e.Exception.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             e.Handled = true;
         }
 
@@ -113,7 +111,7 @@ namespace SNIBypassGUI
         {
             var ex = (Exception)e.ExceptionObject;
             WriteLog("Unhandled Domain Exception!", LogLevel.Error, ex);
-            MessageBox.Show($"遇到未处理的时发生错误。\n{ex}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"遇到未处理的异常：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 }

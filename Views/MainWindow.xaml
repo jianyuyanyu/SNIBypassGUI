@@ -721,8 +721,6 @@
                                                 <Border x:Name="LastColumnBorder" Grid.Row="0" Grid.RowSpan="1" Grid.Column="2" BorderBrush="Transparent" BorderThickness="0" Background="{DynamicResource BackgroundBrush}" CornerRadius="0,8,8,0"></Border>
                                             </Grid>
                                         </Border>
-                                        <TextBlock Margin="10,0,10,5" TextWrapping="Wrap" Text="* 点击上面的链接可以直接打开哦，没发现吧，嘻嘻" FontSize="14" Foreground="#FF6B6B6B" FontStyle="Italic" FontFamily="Microsoft YaHei UI"/>
-                                        <TextBlock Margin="10,0,10,10" TextWrapping="Wrap" Text="目前部分站点还有问题，正在适配！如发现完全支持的站点访问出现异常，请转到设置提交反馈，谢谢！" FontSize="19" Foreground="#FF7600DC" />
                                     </StackPanel>
                                 </ScrollViewer>
                             </hc:TabItem>
@@ -749,7 +747,7 @@
                                             <Button x:Name="UpdateBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource UpdateGeometry}" Click="UpdateBtn_Click" Margin="10,10,5,10" HorizontalAlignment="Stretch" Content="更新数据"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FF2100C3" BorderBrush="#FF2100C3" VerticalContentAlignment="Center"/>
                                             <Button x:Name="AutoCheckUpdateBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource FindGeometry}" Click="AutoCheckUpdateBtn_Click" Grid.Column="1" Margin="5,10,10,10" HorizontalAlignment="Stretch" Content="自动检查更新：关"  Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FF2100C3" BorderBrush="#FF2100C3" VerticalContentAlignment="Center"/>
                                         </Grid>
-                                        <Button x:Name="CleanBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource CleanGeometry}" Click="CleanBtn_Click" Margin="10,0,10,10" HorizontalAlignment="Stretch" Content="清理临时文件 (0MB)" Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FF2100C3" BorderBrush="#FF2100C3" VerticalContentAlignment="Center"/>
+                                        <Button x:Name="CleanBtn" hc:BorderElement.CornerRadius="8" hc:IconElement.Geometry="{StaticResource CleanGeometry}" Click="CleanBtn_Click" Margin="10,0,10,10" HorizontalAlignment="Stretch" Content="清理临时文件" Background="{DynamicResource BackgroundBrush}" FontSize="15" Padding="4" Foreground="#FF2100C3" BorderBrush="#FF2100C3" VerticalContentAlignment="Center"/>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition/>

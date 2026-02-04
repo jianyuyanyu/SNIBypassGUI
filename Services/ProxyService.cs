@@ -79,7 +79,7 @@ namespace SNIBypassGUI.Services
                     }
                     catch (Exception ex)
                     {
-                        WriteLog($"Error stopping Core Service: {ex.Message}", LogLevel.Error, ex);
+                        WriteLog($"Error stopping Core Service.", LogLevel.Error, ex);
                     }
                 }
 
@@ -96,7 +96,7 @@ namespace SNIBypassGUI.Services
                     }
                     catch (Exception ex)
                     {
-                        WriteLog($"Error stopping DNS Service: {ex.Message}", LogLevel.Error, ex);
+                        WriteLog($"Error stopping DNS Service.", LogLevel.Error, ex);
                     }
                 }
 
@@ -117,8 +117,6 @@ namespace SNIBypassGUI.Services
         {
             try
             {
-                if (PortUtils.IsTcpPortInUse(80) || PortUtils.IsTcpPortInUse(443))
-                    WriteLog("Port 80 or 443 is in use. Nginx might fail to start.", LogLevel.Warning);
                 await Task.Run(() => ProcessUtils.StartProcess(PathConsts.Nginx, "", PathConsts.NginxDirectory, false, true));
             }
             catch (Exception ex)
@@ -238,7 +236,7 @@ namespace SNIBypassGUI.Services
             }
             catch (Exception ex)
             {
-                WriteLog($"Exception restoring adapter {Adapter.FriendlyName}: {ex.Message}", LogLevel.Error, ex);
+                WriteLog($"Exception restoring adapter {Adapter.FriendlyName}.", LogLevel.Error, ex);
             }
         }
 
@@ -272,7 +270,7 @@ namespace SNIBypassGUI.Services
                             }
                             catch (Exception ex)
                             {
-                                WriteLog($"Error decoding hosts for {item.Id}", LogLevel.Error, ex);
+                                WriteLog($"Error decoding hosts for {item.Id}.", LogLevel.Error, ex);
                             }
                         }
                     }
@@ -282,7 +280,7 @@ namespace SNIBypassGUI.Services
             }
             catch (Exception ex)
             {
-                WriteLog($"Exception updating Hosts file: {ex.Message}", LogLevel.Error, ex);
+                WriteLog($"Exception updating Hosts file.", LogLevel.Error, ex);
             }
         }
 
@@ -294,7 +292,7 @@ namespace SNIBypassGUI.Services
             }
             catch (Exception ex)
             {
-                WriteLog($"Exception removing Hosts records: {ex.Message}", LogLevel.Error, ex);
+                WriteLog($"Exception removing Hosts records.", LogLevel.Error, ex);
             }
         }
     }

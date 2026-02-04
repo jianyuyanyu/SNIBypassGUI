@@ -43,7 +43,7 @@ namespace SNIBypassGUI.Services
                 ProcessUtils.GetProcessCount(Process.GetCurrentProcess().MainModule.ModuleName) > 1)
             {
                 WriteLog("Program is already running. Exiting.", LogLevel.Warning);
-                HandyControl.Controls.MessageBox.Show("SNIBypassGUI 已经在运行！请检查是否有托盘图标！\nΣ(っ °Д °;)っ", "提示", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+                HandyControl.Controls.MessageBox.Show("程序已在运行中，请检查系统托盘图标。", "提示", MessageBoxButton.OK, MessageBoxImage.Exclamation);
                 Environment.Exit(1);
             }
         }

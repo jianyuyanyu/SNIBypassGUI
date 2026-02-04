@@ -1,14 +1,11 @@
-﻿using SNIBypassGUI.Common.Interop;
-using System;
+﻿using System;
 using System.IO;
-using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using SNIBypassGUI.Common.Interop;
 using SNIBypassGUI.Common.IO;
 using static SNIBypassGUI.Common.LogManager;
 

@@ -49,7 +49,7 @@ namespace SNIBypassGUI.Views
 
         // Timers
         private readonly DispatcherTimer _serviceStatusTimer = new() { Interval = TimeSpan.FromSeconds(3) };
-        private readonly DispatcherTimer _tempFilesTimer = new() { Interval = TimeSpan.FromSeconds(10) };
+        private readonly DispatcherTimer _tempFilesTimer = new() { Interval = TimeSpan.FromSeconds(3) };
         private readonly DispatcherTimer _adapterSwitchTimer = new() { Interval = TimeSpan.FromSeconds(5) };
 
         // Configuration Watcher
@@ -62,6 +62,7 @@ namespace SNIBypassGUI.Views
 
         private volatile bool _isSwitchingAdapter = false;
         private bool _isSilentStartup = false;
+        private bool _isInitialized = false;
         private bool _isBusy = false;
 
         private UpdateManifest _pendingUpdateManifest;
@@ -81,6 +82,8 @@ namespace SNIBypassGUI.Views
             DataContext = this;
 
             _adapterSwitchTimer.Tick += AdapterAutoSwitchTimer_Tick;
+            _serviceStatusTimer.Tick += (_, _) => UpdateUiState();
+            _tempFilesTimer.Tick += (_, _) => UpdateTempFilesSize();
 
             BackgroundService = new ImageSwitcherService();
             BackgroundService.PropertyChanged += OnBackgroundChanged;
@@ -88,6 +91,9 @@ namespace SNIBypassGUI.Views
 
             TaskbarIconLeftClickCommand = new AsyncCommand(TaskbarIcon_LeftClick);
             TopBar.MouseLeftButtonDown += (o, e) => DragMove();
+            TaskbarIcon.TrayBalloonTipClicked += (s, e) => ShowMainFromTray();
+
+            MainTabControl.SelectionChanged += TabControl_SelectionChanged;
 
             TrayIconUtils.RefreshNotification();
         }
@@ -108,6 +114,11 @@ namespace SNIBypassGUI.Views
 
         private async Task InitializeAppAsync(bool isSilent)
         {
+            if (_isInitialized) return;
+            _isInitialized = true;
+
+            WindowTitle.Text += $" {AppConsts.CurrentVersion}";
+
             if (ConfigManager.Instance.Settings == null) await ConfigManager.Instance.LoadAsync();
             ApplySettings();
 
@@ -121,37 +132,29 @@ namespace SNIBypassGUI.Views
 
             if (ArgumentUtils.ContainsArgument(Environment.GetCommandLineArgs(), AppConsts.CleanUpArgument))
             {
-                Application.Current.Shutdown();
+                Environment.Exit(0);
                 return;
             }
 
             if (isSilent)
             {
                 bool started = await ExecuteStartServiceAsync(true);
-                if (started)
-                    TaskbarIcon.ShowBalloonTip("SNIBypassGUI 已启动", "服务已在后台成功运行，正在为您保驾护航喵~ (≧◡≦)", BalloonIcon.Info);
-                else
-                    TaskbarIcon.ShowBalloonTip("启动遇到问题", "后台服务启动失败，请打开主界面查看详细原因。", BalloonIcon.Error);
+                if (started) TaskbarIcon.ShowBalloonTip("启动成功", "服务已启动，正在后台运行。", BalloonIcon.Info);
+                else if (!_pendingPortConflict) TaskbarIcon.ShowBalloonTip("启动失败", "服务启动失败，请打开主界面查看详情。", BalloonIcon.Error);
 
                 if (ConfigManager.Instance.Settings.Program.AutoCheckUpdate)
-                    await CheckUpdate(true);
+                    await CheckUpdate(true, suppressNotification: _pendingPortConflict);
             }
             else
             {
                 ShowInTaskbar = true;
-
-                Show();
-                AnimateWindow(0.0, 1.0, () =>
-                {
-                    Activate();
-                    ShowContent();
-                    UpdateUiState();
-                });
+                ShowMainFromTray();
 
                 if (ConfigManager.Instance.Settings.Program.AutoCheckUpdate)
                     await CheckUpdate(false);
             }
             _adapterSwitchTimer.Start();
+            _serviceStatusTimer.Start();
 
             TaskbarIcon.Visibility = Visibility.Visible;
         }
@@ -198,11 +201,11 @@ namespace SNIBypassGUI.Views
 
                 if (string.IsNullOrEmpty(targetAdapterName))
                 {
-                    if (!silent) MessageBox.Show("请先在下拉框中选择活动的适配器！", "提示", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+                    if (!silent) MessageBox.Show("请先选择一个有效的网络适配器。", "提示", MessageBoxButton.OK, MessageBoxImage.Exclamation);
                     else WriteLog("Silent start failed: No adapter specified in config.", LogLevel.Warning);
                     return false;
                 }
-                await CheckAndHandlePortConflicts(silent);
+                if (!await CheckAndHandlePortConflicts(silent)) return false;
                 await _proxyService.UpdateHostsFromConfigAsync();
                 await _proxyService.StartAsync(status =>
                 {
@@ -230,7 +233,7 @@ namespace SNIBypassGUI.Views
             }
         }
 
-        private async Task CheckAndHandlePortConflicts(bool silent)
+        private async Task<bool> CheckAndHandlePortConflicts(bool silent)
         {
             int pid80 = PortUtils.FindPidForPort(80);
             int pid443 = PortUtils.FindPidForPort(443);
@@ -241,15 +244,14 @@ namespace SNIBypassGUI.Views
                 {
                     _pendingPortConflict = true;
                     WriteLog($"Ports 80(PID:{pid80})/443(PID:{pid443}) in use. Marked for UI prompt.", LogLevel.Warning);
-                    TaskbarIcon.ShowBalloonTip("端口占用提示", "检测到 80/443 端口被占用，服务可能受限。\n点击此处打开主界面解决。", BalloonIcon.Warning);
+                    TaskbarIcon.ShowBalloonTip("端口被占用", "检测到 80/443 端口被占用，请点击此处处理端口冲突。", BalloonIcon.Warning);
+                    return false;
                 }
                 else
                 {
                     string occupiedBy = (pid80 == 4 || pid443 == 4) ? "系统服务 (如 IIS)" : "其他程序";
-
-                    var result = MessageBox.Show($"检测到 80 或 443 端口被 {occupiedBy} 占用。\n\n是否尝试自动释放端口？\n(这将结束占用进程或停止 IIS 服务)",
-                        "端口冲突", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-
+                    var result = MessageBox.Show($"检测到 80 或 443 端口被{occupiedBy}占用。是否尝试自动释放端口？\n这将结束占用进程或停止相关服务。",
+                        "警告", MessageBoxButton.YesNo, MessageBoxImage.Warning);
                     if (result == MessageBoxResult.Yes)
                     {
                         ServiceStatusText.Text = "端口占用清理中";
@@ -257,12 +259,33 @@ namespace SNIBypassGUI.Views
 
                         await PortUtils.FreeTcpPortsAsync([80, 443]);
 
-                        if (PortUtils.IsTcpPortInUse(80) || PortUtils.IsTcpPortInUse(443))
-                            MessageBox.Show("尝试释放端口失败，或者端口被顽固进程占用。\n请尝试手动关闭相关软件（如 Skype, VMware, IIS）。", "清理失败", MessageBoxButton.OK, MessageBoxImage.Error);
-                        else WriteLog("Ports freed successfully.", LogLevel.Info);
+                        bool isFreed = false;
+                        for (int i = 0; i < 6; i++)
+                        {
+                            if (!PortUtils.IsTcpPortInUse(80) && !PortUtils.IsTcpPortInUse(443))
+                            {
+                                isFreed = true;
+                                break;
+                            }
+                            await Task.Delay(500);
+                        }
+
+                        if (isFreed)
+                        {
+                            MessageBox.Show("尝试释放端口失败，或者端口被顽固进程占用。\n请尝试手动关闭相关软件。", "清理失败", MessageBoxButton.OK, MessageBoxImage.Error);
+                            WriteLog("Port 80 or 443 is in use. Nginx might fail to start.", LogLevel.Warning);
+                            return false;
+                        }
+                        else
+                        {
+                            WriteLog("Ports freed successfully.", LogLevel.Info);
+                            return true;
+                        }
                     }
+                    else return true;
                 }
             }
+            return true;
         }
 
         private async Task<bool> ExecuteStopServiceAsync(bool silent)
@@ -290,7 +313,7 @@ namespace SNIBypassGUI.Views
             }
             catch (Exception ex)
             {
-                WriteLog($"Failed to stop service: {ex.Message}", LogLevel.Error, ex);
+                WriteLog($"Failed to stop service.", LogLevel.Error, ex);
                 if (!silent) MessageBox.Show($"停止服务失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
@@ -306,18 +329,17 @@ namespace SNIBypassGUI.Views
         private async void ApplyBtn_Click(object sender, RoutedEventArgs e)
         {
             ApplyBtn.IsEnabled = UnchangeBtn.IsEnabled = false;
-            ApplyBtn.Content = "应用更改中";
-
-            bool wasRunning = AcrylicUtils.IsAcrylicServiceRunning();
-
-            try { await Task.Run(() => AcrylicUtils.StopAcrylicService()); } catch { }
+            ApplyBtn.Content = "正在应用更改…";
 
             UpdateConfigFromToggleButtons();
-            ConfigManager.Instance.Save();
+            await ConfigManager.Instance.SaveNowAsync();
 
-            await _proxyService.UpdateHostsFromConfigAsync();
-
-            if (wasRunning) await AcrylicUtils.StartAcrylicService();
+            if (AcrylicUtils.IsAcrylicServiceRunning())
+            {
+                await AcrylicUtils.StopAcrylicService();
+                await _proxyService.UpdateHostsFromConfigAsync();
+                await AcrylicUtils.StartAcrylicService();
+            }
 
             AcrylicUtils.RemoveAcrylicCacheFile();
             await Task.Run(() => NetworkUtils.FlushDNS());
@@ -366,14 +388,8 @@ namespace SNIBypassGUI.Views
             bool isRunning = isNginxRunning || isDnsRunning;
 
             StartBtn.IsEnabled = !isRunning && !_isBusy && hasSelectedAdapter;
-
-            if (!isRunning && !hasSelectedAdapter)
-                StartBtn.ToolTip = "请先选择一个有效的网络适配器";
-            else
-                StartBtn.ToolTip = null;
-
             StopBtn.IsEnabled = isRunning && !_isBusy;
-            AutoSwitchAdapterBtn.IsEnabled = !isRunning && !_isBusy; // 运行时不允许切换自动模式，防止逻辑混乱
+            AutoSwitchAdapterBtn.IsEnabled = !isRunning && !_isBusy;
             RefreshBtn.IsEnabled = !_isBusy;
 
             AdaptersCombo.IsEnabled = !isRunning && !_isBusy && !isAutoSwitch;
@@ -382,11 +398,10 @@ namespace SNIBypassGUI.Views
         private void UpdateTempFilesSize()
         {
             long total = FileUtils.GetDirectorySize(PathConsts.LogDirectory) +
-                         FileUtils.GetFileSize(PathConsts.NginxAccessLog) +
-                         FileUtils.GetFileSize(PathConsts.NginxErrorLog) +
-                         FileUtils.GetFileSize(PathConsts.AcrylicCache) +
-                         FileUtils.GetDirectorySize(PathConsts.NginxCacheDirectory);
-
+                            FileUtils.GetFileSize(PathConsts.NginxAccessLog) +
+                            FileUtils.GetFileSize(PathConsts.NginxErrorLog) +
+                            FileUtils.GetFileSize(PathConsts.AcrylicCache) +
+                            FileUtils.GetDirectorySize(PathConsts.NginxCacheDirectory);
             CleanBtn.Content = $"清理临时文件 ({total.ToReadableSize()})";
         }
 
@@ -394,7 +409,7 @@ namespace SNIBypassGUI.Views
         {
             try
             {
-                string text = await NetworkUtils.GetAsync("https://v1.hitokoto.cn/?c=d", 10.0, "Mozilla/5.0");
+                string text = await NetworkUtils.GetAsync("https://v1.hitokoto.cn/?c=d");
                 JObject repodata = JObject.Parse(text);
                 TaskbarIconYiyan.Text = repodata["hitokoto"].ToString();
                 TaskbarIconYiyanFrom.Text = $"—— {repodata["from_who"]}「{repodata["from"]}」";
@@ -430,7 +445,7 @@ namespace SNIBypassGUI.Views
             catch (Exception ex)
             {
                 WriteLog("Exception checking DNS service.", LogLevel.Error, ex);
-                MessageBox.Show($"检查服务时发生错误。\n{ex}", "错误", MessageBoxButton.OK, MessageBoxImage.Hand);
+                MessageBox.Show($"检查服务时发生错误：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Hand);
             }
         }
 
@@ -453,11 +468,10 @@ namespace SNIBypassGUI.Views
                 else
                 {
                     if (AdaptersCombo.Items.Count == 0) await UpdateAdaptersCombo();
-
                     if (AdaptersCombo.Items.Count == 0)
                     {
                         WriteLog("No active network adapters found.", LogLevel.Warning);
-                        if (MessageBox.Show("没有找到活动且可设置的网络适配器！您可能需要手动设置。\n点击“是”将为您展示有关帮助。", "警告", MessageBoxButton.YesNo, MessageBoxImage.Exclamation, MessageBoxResult.None) == MessageBoxResult.Yes)
+                        if (MessageBox.Show("没有找到活动且可设置的网络适配器，您可能需要手动设置。\n点击“是”将为您展示有关帮助。", "警告", MessageBoxButton.YesNo, MessageBoxImage.Exclamation) == MessageBoxResult.Yes)
                             ProcessUtils.StartProcess(LinksConsts.AdapterNotFoundOrSetupFailedHelpLink, useShellExecute: true);
                     }
                 }
@@ -492,8 +506,6 @@ namespace SNIBypassGUI.Views
 
             bool isServiceRunning = !ServiceStatusText.Text.Contains("未运行");
             bool isAutoMode = ConfigManager.Instance.Settings.Program.AutoSwitchAdapter;
-
-            if (!isServiceRunning && !isAutoMode) return;
 
             _isSwitchingAdapter = true;
 
@@ -530,12 +542,12 @@ namespace SNIBypassGUI.Views
 
                     if (shouldEmergencyStop)
                     {
-                        WriteLog($"[EMERGENCY STOP] {stopReason}", LogLevel.Error);
-
+                        WriteLog(stopReason, LogLevel.Error);
                         await Dispatcher.InvokeAsync(async () =>
                         {
                             TaskbarIcon.ShowBalloonTip("服务已停止", "检测到当前网络适配器丢失，已停止服务。", BalloonIcon.Error);
                             await ExecuteStopServiceAsync(true);
+                            UpdateAdaptersCombo(allAdapters);
                         });
                         return;
                     }
@@ -577,7 +589,7 @@ namespace SNIBypassGUI.Views
             }
             catch (Exception ex)
             {
-                WriteLog($"Adapter monitor error: {ex.Message}", LogLevel.Error);
+                WriteLog($"Adapter monitor error.", LogLevel.Error, ex);
             }
             finally
             {
@@ -844,7 +856,7 @@ namespace SNIBypassGUI.Views
 
                     if (IsLogEnabled)
                     {
-                        Dispatcher.Invoke(() => MessageBox.Show("GUI 调试开启时将不会删除调试日志，请尝试关闭 GUI 调试。", "提示", MessageBoxButton.OK, MessageBoxImage.Asterisk, MessageBoxResult.None));
+                        Dispatcher.Invoke(() => MessageBox.Show("GUI 调试模式已启用，日志清理操作已跳过。如需清理日志文件，请先关闭 GUI 调试模式。", "提示", MessageBoxButton.OK, MessageBoxImage.Asterisk));
                         foreach (string file in Directory.GetFiles(PathConsts.LogDirectory))
                             if (file != GetLogPath()) FileUtils.TryDelete(file, 5, 500);
                     }
@@ -859,14 +871,14 @@ namespace SNIBypassGUI.Views
 
             WriteLog("Cleanup complete.", LogLevel.Info);
             _tempFilesTimer.Start();
-            MessageBox.Show("服务运行日志及缓存清理完成，请自行重启服务！", "提示", MessageBoxButton.OK, MessageBoxImage.Asterisk);
+            MessageBox.Show("运行日志及缓存清理已完成，请重新启动服务。", "提示", MessageBoxButton.OK, MessageBoxImage.Asterisk);
             UpdateTempFilesSize();
             CleanBtn.IsEnabled = true;
         }
 
         private async void UninstallBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (MessageBox.Show("该功能将立即从系统上移除本程序并消除本程序对系统设置所作的有关修改。\n是否继续卸载？", "卸载", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.None) == MessageBoxResult.Yes)
+            if (MessageBox.Show("此操作将从系统中彻底移除本程序，并还原对系统设置的所有更改。\n是否确认继续卸载？", "卸载", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 UninstallBtn.Content = "卸载中…";
                 UninstallBtn.IsEnabled = false;
@@ -914,7 +926,7 @@ namespace SNIBypassGUI.Views
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"卸载时发生错误。\n{ex}", "错误", MessageBoxButton.OK, MessageBoxImage.Hand);
+                    MessageBox.Show($"卸载时发生错误：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Hand);
                 }
             }
         }
@@ -945,12 +957,12 @@ namespace SNIBypassGUI.Views
                     ProcessUtils.StartProcess(PathConsts.CurrentExe, $"{AppConsts.WaitForParentArgument} {Process.GetCurrentProcess().Id}", "", false, false);
                     ExitBtn.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
                 }
-                else MessageBox.Show("所有文件已同步，当前已是最新版本！", "提示", MessageBoxButton.OK, MessageBoxImage.Asterisk);
+                else MessageBox.Show("所有文件已同步，当前已是最新版本。", "提示", MessageBoxButton.OK, MessageBoxImage.Asterisk);
             }
             catch (Exception ex)
             {
-                WriteLog($"Update exception: {ex.Message}", LogLevel.Error, ex);
-                MessageBox.Show($"更新数据时发生错误。\n{ex}", "错误", MessageBoxButton.OK, MessageBoxImage.Hand);
+                WriteLog($"Update exception.", LogLevel.Error, ex);
+                MessageBox.Show($"更新数据时发生错误：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Hand);
             }
             finally
             {
@@ -971,7 +983,7 @@ namespace SNIBypassGUI.Views
                     int partIndex = 1;
                     foreach (string partUrl in exeInfo.Parts)
                     {
-                        UpdateProgressText($"下载切片 ({partIndex}/{exeInfo.Parts.Count})");
+                        UpdateProgressText($"下载分片 ({partIndex}/{exeInfo.Parts.Count})");
                         byte[] data = await NetworkUtils.GetByteArrayAsync(partUrl, 120.0);
                         await fs.WriteAsync(data, 0, data.Length);
                         partIndex++;
@@ -1022,7 +1034,7 @@ namespace SNIBypassGUI.Views
             }
         }
 
-        private async Task CheckUpdate(bool silent)
+        private async Task CheckUpdate(bool silent, bool suppressNotification = false)
         {
             try
             {
@@ -1064,30 +1076,21 @@ namespace SNIBypassGUI.Views
                         {
                             Dispatcher.Invoke(() =>
                             {
-                                if (MessageBox.Show(tipMessage + "！\n是否立即更新？", "发现更新", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.None) == MessageBoxResult.Yes)
+                                if (MessageBox.Show(tipMessage + "！\n是否立即更新？", "发现更新", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                                     UpdateBtn.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
                             });
                         }
                         else
                         {
                             _pendingUpdateManifest = manifest;
-
-                            TaskbarIcon.ShowBalloonTip("发现更新", $"{tipMessage}，点击查看详情\n(ง๑ •̀_•́)ง", BalloonIcon.Info);
-
-                            void clickHandler(object s, RoutedEventArgs e)
-                            {
-                                TaskbarIcon.TrayBalloonTipClicked -= clickHandler;
-                                ShowMainFromTray();
-                                MainTabControl.SelectedIndex = 2;
-                            }
-                            TaskbarIcon.TrayBalloonTipClicked += clickHandler;
+                            if (!suppressNotification) TaskbarIcon.ShowBalloonTip("发现更新", $"{tipMessage}，点击查看详情。", BalloonIcon.Info);
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                WriteLog($"Auto-update check failed: {ex.Message}", LogLevel.Error, ex);
+                WriteLog($"Auto-update check failed.", LogLevel.Error, ex);
             }
         }
 
@@ -1109,7 +1112,7 @@ namespace SNIBypassGUI.Views
 
         private async void ResetBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (MessageBox.Show("还原数据功能用于将本程序关联的数据文件恢复为初始状态。\r\n当您认为本程序更新造成了关联的数据文件损坏，或您对有关规则做出了修改时可以使用此功能。\r\n是否还原数据？", "提示", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            if (MessageBox.Show("此操作将把所有配置文件及规则数据重置为内置版本。\n该功能适用于修复因配置错误或文件损坏导致的问题。\n是否确认重置数据？", "提示", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 ResetBtn.IsEnabled = false;
                 ResetBtn.Content = "还原中…";
@@ -1125,7 +1128,7 @@ namespace SNIBypassGUI.Views
                 catch (Exception ex)
                 {
                     WriteLog("Reset exception.", LogLevel.Error, ex);
-                    MessageBox.Show($"还原数据时发生错误。\n{ex}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"还原数据时发生错误：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 finally
                 {
@@ -1179,8 +1182,8 @@ namespace SNIBypassGUI.Views
             }
             catch (Exception ex)
             {
-                WriteLog($"Certificate installation error: {ex.Message}", LogLevel.Error, ex);
-                MessageBox.Show($"安装证书时发生异常。\n{ex}", "错误", MessageBoxButton.OK, MessageBoxImage.Hand);
+                WriteLog($"Certificate installation error.", LogLevel.Error, ex);
+                MessageBox.Show($"安装证书时发生异常：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Hand);
             }
         }
 
@@ -1275,32 +1278,20 @@ namespace SNIBypassGUI.Views
             }
         }
 
-        private void MenuItem_ShowMainWin_Click(object sender, RoutedEventArgs e)
-        {
-            if ((Math.Abs(Opacity) < 1E-06 || !IsVisible) && !IsAnyDialogOpen())
-            {
-                Show();
-                AnimateWindow(0.0, 1.0, () => { Activate(); ShowContent(); });
-            }
-            else Activate();
-        }
+        private void MenuItem_ShowMainWin_Click(object sender, RoutedEventArgs e) => ShowMainFromTray();
 
         private async void MenuItem_StartService_Click(object sender, RoutedEventArgs e)
         {
             bool success = await ExecuteStartServiceAsync(false);
-            if (success)
-            {
-                TaskbarIcon.ShowBalloonTip("成功启动服务", "您现在可以尝试访问列表中的网站\nฅ^•ω•^ฅ", BalloonIcon.Info);
-            }
+            if (success) TaskbarIcon.ShowBalloonTip("启动成功", "服务已启动，正在后台运行。", BalloonIcon.Info);
+            else TaskbarIcon.ShowBalloonTip("启动失败", "服务启动失败，请打开主界面查看详情。", BalloonIcon.Error);
         }
 
         private async void MenuItem_StopService_Click(object sender, RoutedEventArgs e)
         {
             bool success = await ExecuteStopServiceAsync(false);
-            if (success)
-            {
-                TaskbarIcon.ShowBalloonTip("成功停止服务", "感谢您的使用\n^›⩊‹^ ੭", BalloonIcon.Info);
-            }
+            if (success) TaskbarIcon.ShowBalloonTip("停止成功", "服务已成功停止。", BalloonIcon.Info);
+            else TaskbarIcon.ShowBalloonTip("停止失败", "服务停止失败，请打开主界面查看详情。", BalloonIcon.Error);
         }
 
         private void MenuItem_ExitTool_Click(object sender, RoutedEventArgs e) =>
@@ -1319,7 +1310,7 @@ namespace SNIBypassGUI.Views
             {
                 Hide();
                 HideContent();
-                TaskbarIcon.ShowBalloonTip("已最小化运行", "点击托盘图标显示主界面或右键显示菜单\nε٩(๑> ₃ <)۶з", BalloonIcon.Info);
+                TaskbarIcon.ShowBalloonTip("已最小化", "程序已最小化到托盘，点击图标显示主界面。", BalloonIcon.Info);
                 MinimizeToTrayBtn.IsEnabled = true;
             });
         }
@@ -1362,7 +1353,7 @@ namespace SNIBypassGUI.Views
         private void DebugModeBtn_Click(object sender, RoutedEventArgs e)
         {
             bool current = ConfigManager.Instance.Settings.Advanced.DebugMode;
-            if (!current && MessageBox.Show("调试模式仅用于开发和问题诊断，不当启用可能导致非预期行为。建议仅在开发者指导下开启。\n是否继续启用？", "提示", MessageBoxButton.YesNo, MessageBoxImage.Exclamation, MessageBoxResult.None) == MessageBoxResult.Yes)
+            if (!current && MessageBox.Show("调试模式仅用于开发和问题诊断，不当启用可能导致非预期行为。建议仅在开发者指导下开启。\n是否继续启用？", "提示", MessageBoxButton.YesNo, MessageBoxImage.Exclamation) == MessageBoxResult.Yes)
                 ConfigManager.Instance.Settings.Advanced.DebugMode = true;
             else
             {
@@ -1377,7 +1368,7 @@ namespace SNIBypassGUI.Views
         private void AcrylicDebugBtn_Click(object sender, RoutedEventArgs e)
         {
             bool current = ConfigManager.Instance.Settings.Advanced.AcrylicDebug;
-            if (!current && MessageBox.Show("开启 DNS 服务调试功能，可帮助诊断网络流量走向相关问题。该设置将在服务重启后生效。\n请在重启服务并复现问题后，将相关信息提交给开发者。\n是否确认开启 DNS 服务调试？", "提示", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.None) == MessageBoxResult.Yes)
+            if (!current && MessageBox.Show("开启 DNS 服务调试功能，可帮助诊断网络流量走向相关问题。该设置将在服务重启后生效。\n请在重启服务并复现问题后，将相关信息提交给开发者。\n是否确认开启 DNS 服务调试？", "提示", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                 ConfigManager.Instance.Settings.Advanced.AcrylicDebug = true;
             else ConfigManager.Instance.Settings.Advanced.AcrylicDebug = false;
             ConfigManager.Instance.Save();
@@ -1388,7 +1379,7 @@ namespace SNIBypassGUI.Views
         {
             bool current = ConfigManager.Instance.Settings.Advanced.GUIDebug;
 
-            if (!current && MessageBox.Show("开启 GUI 调试模式有助于更精准地定位问题，但生成日志会增加一定的性能开销，建议在不使用时及时关闭。\n开启后程序将自动退出，重启后生效。\n请您在重启并复现问题后，将相关信息提交给开发者。\n是否确认开启 GUI 调试模式并重启程序？", "提示", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.None) == MessageBoxResult.Yes)
+            if (!current && MessageBox.Show("开启 GUI 调试模式有助于更精准地定位问题，但生成日志会增加一定的性能开销，建议在不使用时及时关闭。\n开启后程序将自动退出，重启后生效。\n请您在重启并复现问题后，将相关信息提交给开发者。\n是否确认开启 GUI 调试模式并重启程序？", "提示", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 GUIDebugBtn.IsEnabled = false;
 
@@ -1411,21 +1402,21 @@ namespace SNIBypassGUI.Views
             try
             {
                 FileUtils.EnsureFileExists(PathConsts.SystemHosts);
-                ProcessUtils.StartProcess("notepad.exe", PathConsts.SystemHosts, "", true, false);
+                ProcessUtils.StartProcess("notepad.exe", PathConsts.SystemHosts, useShellExecute:true);
             }
             catch (Exception ex)
             {
-                WriteLog($"Exception opening Hosts file: {ex.Message}", LogLevel.Error, ex);
-                MessageBox.Show($"打开 {PathConsts.SystemHosts} 时发生错误。\n{ex}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                WriteLog($"Exception opening Hosts file: {PathConsts.SystemHosts}", LogLevel.Error, ex);
+                MessageBox.Show($"打开 {PathConsts.SystemHosts} 时发生错误：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private void FeedbackBtn_Click(object sender, RoutedEventArgs e)
         {
             string message = "如果您在使用过程中遇到问题或有任何建议，欢迎通过以下方式联系我们：\n" +
-                             "● QQ 交流群：946813204\n" +
-                             "● 电子邮件：hi@racpast.com 或 racpast@gmail.com\n" +
-                             "是否立即跳转加入 QQ 群？";
+                                    "● QQ 交流群：946813204\n" +
+                                    "● 电子邮件：hi@racpast.com 或 racpast@gmail.com\n" +
+                                    "是否立即跳转加入 QQ 群？";
 
             if (MessageBox.Show(message, "反馈与建议", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
                 ProcessUtils.StartProcess(LinksConsts.QqGroupJoinUrl, useShellExecute:true);
@@ -1514,17 +1505,29 @@ namespace SNIBypassGUI.Views
         {
             _isSilentStartup = false;
             ShowInTaskbar = true;
+
+            if (Visibility == Visibility.Visible && Opacity > 0.9)
+            {
+                Activate();
+                return;
+            }
+
             Visibility = Visibility.Visible;
             Show();
-            AnimateWindow(0.0, 1.0, () => { Activate(); ShowContent(); ProcessPendingStates(); });
+            AnimateWindow(0.0, 1.0, () => {
+                Activate();
+                ShowContent();
+                UpdateUiState();
+                ProcessPendingStates();
+            });
         }
 
-        private void ProcessPendingStates()
+        private async void ProcessPendingStates()
         {
             if (_pendingPortConflict)
             {
                 _pendingPortConflict = false;
-                _ = CheckAndHandlePortConflicts(false);
+                await ExecuteStartServiceAsync(false);
             }
 
             if (_pendingUpdateManifest != null)
@@ -1536,7 +1539,7 @@ namespace SNIBypassGUI.Views
                     ? $"发现主程序新版本 {manifest.Version}"
                     : "发现新的配置或数据文件更新";
 
-                if (MessageBox.Show(tipMessage + "！\n是否立即更新？", "发现更新", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.None) == MessageBoxResult.Yes)
+                if (MessageBox.Show(tipMessage + "！\n是否立即更新？", "发现更新", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                     UpdateBtn.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
             }
         }
@@ -1577,7 +1580,8 @@ namespace SNIBypassGUI.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"设置开机启动时发生错误。\n{ex}", "错误", MessageBoxButton.OK, MessageBoxImage.Hand);
+                WriteLog("Failed to enable auto-start task.", LogLevel.Error, ex);
+                MessageBox.Show($"设置开机启动时发生错误：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Hand);
             }
         }
 
@@ -1590,7 +1594,8 @@ namespace SNIBypassGUI.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"取消开机启动时发生错误。\n{ex}", "错误", MessageBoxButton.OK, MessageBoxImage.Hand);
+                WriteLog("Failed to disable auto-start task.", LogLevel.Error, ex);
+                MessageBox.Show($"取消开机启动时发生错误：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Hand);
             }
         }
 

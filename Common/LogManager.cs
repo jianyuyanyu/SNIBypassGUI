@@ -1,9 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.CompilerServices;
-using static SNIBypassGUI.Common.IO.FileUtils;
-using static SNIBypassGUI.Consts.AppConsts;
-using static SNIBypassGUI.Consts.PathConsts;
+using SNIBypassGUI.Common.IO;
+using SNIBypassGUI.Consts;
 
 namespace SNIBypassGUI.Common
 {
@@ -18,12 +17,12 @@ namespace SNIBypassGUI.Common
         public static void EnableLog()
         {
             outputLog = true;
-            AppendToFile(GetLogPath(), LogHead);
+            FileUtils.AppendToFile(GetLogPath(), AppConsts.LogHead);
         }
 
         public static void DisableLog() => outputLog = false;
 
-        public static string GetLogPath() => Path.Combine(LogDirectory, $"SNIBypassGUI-{DateTime.Now:yyyy-MM-dd}.log");
+        public static string GetLogPath() => Path.Combine(PathConsts.LogDirectory, $"SNIBypassGUI-{DateTime.Now:yyyy-MM-dd}.log");
 
         public static void WriteLog(string message, LogLevel logLevel = LogLevel.Info, Exception ex = null, [CallerMemberName] string caller = "")
         {
@@ -31,9 +30,9 @@ namespace SNIBypassGUI.Common
             lock (lockObject)
             {
                 string logMessage = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{logLevel}] [{caller}] {message}";
-                if (ex != null) logMessage += $" | 发生错误。\n{ex.Message} | 调用堆栈：{ex.StackTrace}";
+                if (ex != null) logMessage += $" | Exception: {ex.Message} | StackTrace: {ex.StackTrace}";
                 logMessage += $"{Environment.NewLine}";
-                AppendToFile(GetLogPath(), logMessage);
+                FileUtils.AppendToFile(GetLogPath(), logMessage);
             }
         }
 

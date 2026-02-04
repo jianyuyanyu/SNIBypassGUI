@@ -10,9 +10,6 @@ using static SNIBypassGUI.Common.LogManager;
 
 namespace SNIBypassGUI.Common.Network
 {
-    /// <summary>
-    /// Provides utilities for managing network ports and associated processes using WinAPI.
-    /// </summary>
     public static class PortUtils
     {
         /// <summary>
@@ -89,7 +86,7 @@ namespace SNIBypassGUI.Common.Network
                     }
                     catch (Exception ex)
                     {
-                        WriteLog($"Failed to kill/wait for PID {pid}: {ex.Message}", LogLevel.Error);
+                        WriteLog($"Failed to kill/wait for PID {pid}.", LogLevel.Error, ex);
                     }
                     finally
                     {
@@ -98,7 +95,7 @@ namespace SNIBypassGUI.Common.Network
                 }
                 catch (Exception ex)
                 {
-                    WriteLog($"Error processing port {port}: {ex.Message}", LogLevel.Error);
+                    WriteLog($"Error processing port {port}.", LogLevel.Error, ex);
                 }
             }
         }
@@ -142,7 +139,7 @@ namespace SNIBypassGUI.Common.Network
             }
             catch (Exception ex)
             {
-                WriteLog($"Error querying TCP table (AF={ipVersion}): {ex.Message}", LogLevel.Error, ex);
+                WriteLog($"Error querying TCP table (AF={ipVersion}).", LogLevel.Error, ex);
                 return 0;
             }
             finally

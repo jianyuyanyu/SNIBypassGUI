@@ -49,7 +49,7 @@ public class AsyncCommand(Func<Task> execute, Func<bool>? canExecute = null, Act
         }
         catch (Exception ex)
         {
-            WriteLog($"Error executing AsyncCommand: {ex.Message}", LogLevel.Error, ex);
+            WriteLog($"Error executing AsyncCommand.", LogLevel.Error, ex);
             _onException?.Invoke(ex);
         }
         finally
@@ -131,7 +131,7 @@ public class AsyncCommand<T> : ICommand, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            WriteLog($"Error executing AsyncCommand<{typeof(T).Name}>: {ex.Message}", LogLevel.Error, ex);
+            WriteLog($"Error executing AsyncCommand<{typeof(T).Name}>.", LogLevel.Error, ex);
             _onException?.Invoke(ex);
         }
         finally

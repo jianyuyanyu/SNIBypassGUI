@@ -104,7 +104,7 @@ namespace SNIBypassGUI.Views
                 string hashToRemove = FileUtils.CalculateFileHash(selectedItem.ImagePath);
 
                 var bgConfig = ConfigManager.Instance.Settings.Background;
-                bgConfig.ImageOrder.Remove(hashToRemove); // List Removal
+                bgConfig.ImageOrder.Remove(hashToRemove);
                 ConfigManager.Instance.Save();
 
                 FileUtils.TryDelete(selectedItem.ImagePath);
@@ -122,7 +122,7 @@ namespace SNIBypassGUI.Views
             catch (Exception ex)
             {
                 WriteLog("Remove image exception.", LogLevel.Error, ex);
-                MessageBox.Show($"操作失败。\n{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"图像移除失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -161,7 +161,7 @@ namespace SNIBypassGUI.Views
                     catch (Exception ex)
                     {
                         WriteLog($"Add image exception: {file}", LogLevel.Error, ex);
-                        MessageBox.Show($"添加失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                        MessageBox.Show($"添加图像失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
 
@@ -196,7 +196,7 @@ namespace SNIBypassGUI.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"上移失败！\n{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"上移图像失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                 LoadImagesToList();
             }
         }
@@ -223,7 +223,7 @@ namespace SNIBypassGUI.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"下移失败！\n{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"下移图像失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                 LoadImagesToList();
             }
         }
@@ -323,7 +323,7 @@ namespace SNIBypassGUI.Views
                 catch (Exception ex)
                 {
                     WriteLog("Crop exception.", LogLevel.Error, ex);
-                    Dispatcher.Invoke(() => MessageBox.Show($"图像裁剪失败！\n{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error));
+                    Dispatcher.Invoke(() => MessageBox.Show($"图像裁剪失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error));
                 }
                 finally
                 {

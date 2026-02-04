@@ -242,7 +242,7 @@ namespace SNIBypassGUI.Common.Network
                 }
                 catch (Exception ex)
                 {
-                    WriteLog($"Registry IPv4 write failed: {ex.Message}", LogLevel.Error);
+                    WriteLog($"Registry IPv4 write failed.", LogLevel.Error, ex);
                     return false;
                 }
             }
@@ -287,7 +287,7 @@ namespace SNIBypassGUI.Common.Network
             }
             catch (Exception ex)
             {
-                WriteLog($"Exception setting IPv6 DNS via Netsh: {ex.Message}. Attempting Registry fallback...", LogLevel.Warning, ex);
+                WriteLog($"Exception setting IPv6 DNS via Netsh. Attempting Registry fallback...", LogLevel.Warning, ex);
             }
 
             // 2. Fallback to Registry if Netsh failed
@@ -313,7 +313,7 @@ namespace SNIBypassGUI.Common.Network
                 }
                 catch (Exception ex)
                 {
-                    WriteLog($"Registry IPv6 write failed: {ex.Message}", LogLevel.Error, ex);
+                    WriteLog($"Registry IPv6 write failed.", LogLevel.Error, ex);
                     return false;
                 }
             }

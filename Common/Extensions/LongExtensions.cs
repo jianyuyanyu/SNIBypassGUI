@@ -13,7 +13,7 @@ namespace SNIBypassGUI.Common.Extensions
         {
             if (byteCount == 0) return "0 B";
 
-            string[] suffixes = { "B", "KB", "MB", "GB", "TB", "PB", "EB" };
+            string[] suffixes = ["B", "KB", "MB", "GB", "TB", "PB", "EB"];
             long bytes = Math.Abs(byteCount);
             int place = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
 
