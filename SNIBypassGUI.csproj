@@ -144,9 +144,11 @@
     <Compile Include="Behaviors\ToggleButtonAttach.cs" />
     <Compile Include="Common\Commands\AsyncCommand.cs" />
     <Compile Include="Common\Interop\Advapi32.cs" />
+    <Compile Include="Common\Interop\Iphlpapi.cs" />
     <Compile Include="Common\Interop\Kernel32.cs" />
-    <Compile Include="Common\Interop\NetApi.cs" />
+    <Compile Include="Common\Interop\Dnsapi.cs" />
     <Compile Include="Common\Interop\User32.cs" />
+    <Compile Include="Common\Network\PortUtils.cs" />
     <Compile Include="Common\UI\TrayIconUtils.cs" />
     <Compile Include="Consts\ConfigConsts.cs" />
     <Compile Include="Models\AppConfig.cs" />

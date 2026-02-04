@@ -80,6 +80,8 @@ namespace SNIBypassGUI.Views
 
             DataContext = this;
 
+            _adapterSwitchTimer.Tick += AdapterAutoSwitchTimer_Tick;
+
             BackgroundService = new ImageSwitcherService();
             BackgroundService.PropertyChanged += OnBackgroundChanged;
             CurrentImage.Source = BackgroundService.CurrentImage;
@@ -143,11 +145,13 @@ namespace SNIBypassGUI.Views
                 {
                     Activate();
                     ShowContent();
+                    UpdateUiState();
                 });
 
                 if (ConfigManager.Instance.Settings.Program.AutoCheckUpdate)
                     await CheckUpdate(false);
             }
+            _adapterSwitchTimer.Start();
 
             TaskbarIcon.Visibility = Visibility.Visible;
         }
@@ -194,7 +198,7 @@ namespace SNIBypassGUI.Views
 
                 if (string.IsNullOrEmpty(targetAdapterName))
                 {
-                    if (!silent) MessageBox.Show("请先选择适配器...", "提示", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+                    if (!silent) MessageBox.Show("请先在下拉框中选择活动的适配器！", "提示", MessageBoxButton.OK, MessageBoxImage.Exclamation);
                     else WriteLog("Silent start failed: No adapter specified in config.", LogLevel.Warning);
                     return false;
                 }
@@ -221,59 +225,43 @@ namespace SNIBypassGUI.Views
             finally
             {
                 SetBusyState(false);
-                UpdateServiceStatus();
+                Dispatcher.Invoke(UpdateUiState);
                 _serviceStatusTimer.Start();
             }
         }
 
         private async Task CheckAndHandlePortConflicts(bool silent)
         {
-            bool portInUse = NetworkUtils.IsPortInUse(80, false) || NetworkUtils.IsPortInUse(443, false);
+            int pid80 = PortUtils.FindPidForPort(80);
+            int pid443 = PortUtils.FindPidForPort(443);
 
-            if (portInUse)
+            if (pid80 != 0 || pid443 != 0)
             {
                 if (silent)
                 {
                     _pendingPortConflict = true;
-                    WriteLog("Ports 80/443 in use. Marked for UI prompt.", LogLevel.Warning);
+                    WriteLog($"Ports 80(PID:{pid80})/443(PID:{pid443}) in use. Marked for UI prompt.", LogLevel.Warning);
                     TaskbarIcon.ShowBalloonTip("端口占用提示", "检测到 80/443 端口被占用，服务可能受限。\n点击此处打开主界面解决。", BalloonIcon.Warning);
                 }
                 else
                 {
-                    var result = MessageBox.Show("检测到 80 或 443 端口被占用，这通常是 IIS、Apache 或其他 Web 服务引起的。\n\n是否尝试自动结束占用端口的进程？\n(选择“否”将尝试强制启动，但可能会失败)",
+                    string occupiedBy = (pid80 == 4 || pid443 == 4) ? "系统服务 (如 IIS)" : "其他程序";
+
+                    var result = MessageBox.Show($"检测到 80 或 443 端口被 {occupiedBy} 占用。\n\n是否尝试自动释放端口？\n(这将结束占用进程或停止 IIS 服务)",
                         "端口冲突", MessageBoxButton.YesNo, MessageBoxImage.Warning);
 
                     if (result == MessageBoxResult.Yes)
                     {
-                        await Task.Run(() => FreePorts());
+                        ServiceStatusText.Text = "端口占用清理中";
+                        ServiceStatusText.Foreground = Brushes.Magenta;
+
+                        await PortUtils.FreeTcpPortsAsync([80, 443]);
+
+                        if (PortUtils.IsTcpPortInUse(80) || PortUtils.IsTcpPortInUse(443))
+                            MessageBox.Show("尝试释放端口失败，或者端口被顽固进程占用。\n请尝试手动关闭相关软件（如 Skype, VMware, IIS）。", "清理失败", MessageBoxButton.OK, MessageBoxImage.Error);
+                        else WriteLog("Ports freed successfully.", LogLevel.Info);
                     }
                 }
-            }
-        }
-
-        private void FreePorts()
-        {
-            try
-            {
-                string[] ports = { "80", "443" };
-                foreach (var port in ports)
-                {
-                    var psi = new ProcessStartInfo
-                    {
-                        FileName = "cmd.exe",
-                        Arguments = $"/c for /f \"tokens=5\" %a in ('netstat -aon ^| findstr \":{port}\"') do taskkill /f /pid %a",
-                        WindowStyle = ProcessWindowStyle.Hidden,
-                        CreateNoWindow = true,
-                        UseShellExecute = true,
-                        Verb = "runas"
-                    };
-                    Process.Start(psi)?.WaitForExit(2000);
-                }
-                WriteLog("Attempted to free ports 80/443.", LogLevel.Info);
-            }
-            catch (Exception ex)
-            {
-                WriteLog($"Failed to auto-kill port processes: {ex.Message}", LogLevel.Error, ex);
             }
         }
 
@@ -308,7 +296,7 @@ namespace SNIBypassGUI.Views
             finally
             {
                 SetBusyState(false);
-                UpdateServiceStatus();
+                Dispatcher.Invoke(UpdateUiState);
                 _serviceStatusTimer.Start();
             }
 
@@ -355,33 +343,40 @@ namespace SNIBypassGUI.Views
 
         #region UI Updates & Helper Methods
 
-        public void UpdateServiceStatus()
+        private void UpdateUiState()
         {
             if (_isBusy) return;
 
             bool isNginxRunning = ProcessUtils.IsProcessRunning(AppConsts.NginxProcessName);
             bool isDnsRunning = AcrylicUtils.IsAcrylicServiceRunning();
             bool isAutoSwitch = ConfigManager.Instance.Settings.Program.AutoSwitchAdapter;
+            bool hasSelectedAdapter = AdaptersCombo.SelectedItem != null;
 
-            Dispatcher.Invoke(() =>
+            var (text, color) = (isNginxRunning, isDnsRunning) switch
             {
-                var (text, color, btnEnabled, comboEnabled) = (isNginxRunning, isDnsRunning) switch
-                {
-                    (true, true) => ("主服务和DNS服务运行中", Brushes.ForestGreen, false, false),
-                    (true, false) => ("仅主服务运行中", Brushes.DarkOrange, false, false),
-                    (false, true) => ("仅DNS服务运行中", Brushes.DarkOrange, false, false),
-                    (false, false) => ("主服务与DNS服务未运行", Brushes.Red, true, !isAutoSwitch)
-                };
+                (true, true) => ("主服务和DNS服务运行中", Brushes.ForestGreen),
+                (true, false) => ("仅主服务运行中", Brushes.DarkOrange),
+                (false, true) => ("仅DNS服务运行中", Brushes.DarkOrange),
+                (false, false) => ("主服务与DNS服务未运行", Brushes.Red)
+            };
 
-                ServiceStatusText.Text = TaskbarIconServiceST.Text = text;
-                ServiceStatusText.Foreground = TaskbarIconServiceST.Foreground = color;
+            ServiceStatusText.Text = TaskbarIconServiceST.Text = text;
+            ServiceStatusText.Foreground = TaskbarIconServiceST.Foreground = color;
 
-                if (!_isBusy)
-                {
-                    AutoSwitchAdapterBtn.IsEnabled = btnEnabled;
-                    AdaptersCombo.IsEnabled = comboEnabled;
-                }
-            });
+            bool isRunning = isNginxRunning || isDnsRunning;
+
+            StartBtn.IsEnabled = !isRunning && !_isBusy && hasSelectedAdapter;
+
+            if (!isRunning && !hasSelectedAdapter)
+                StartBtn.ToolTip = "请先选择一个有效的网络适配器";
+            else
+                StartBtn.ToolTip = null;
+
+            StopBtn.IsEnabled = isRunning && !_isBusy;
+            AutoSwitchAdapterBtn.IsEnabled = !isRunning && !_isBusy; // 运行时不允许切换自动模式，防止逻辑混乱
+            RefreshBtn.IsEnabled = !_isBusy;
+
+            AdaptersCombo.IsEnabled = !isRunning && !_isBusy && !isAutoSwitch;
         }
 
         private void UpdateTempFilesSize()
@@ -493,54 +488,116 @@ namespace SNIBypassGUI.Views
 
         private async void AdapterAutoSwitchTimer_Tick(object sender, EventArgs e)
         {
-            if (_isSwitchingAdapter) return;
+            if (_isSwitchingAdapter || _isBusy) return;
+
+            bool isServiceRunning = !ServiceStatusText.Text.Contains("未运行");
+            bool isAutoMode = ConfigManager.Instance.Settings.Program.AutoSwitchAdapter;
+
+            if (!isServiceRunning && !isAutoMode) return;
+
             _isSwitchingAdapter = true;
 
             try
             {
-                var active = await GetActiveAdapter();
-                if (active != null)
+                var allAdapters = await NetworkAdapterUtils.GetNetworkAdaptersAsync(NetworkAdapterUtils.ScopeNeeded.FriendlyNameNotNullOnly);
+                var bestRouteIndex = NetworkAdapterUtils.GetDefaultRouteInterfaceIndex();
+                var bestAdapter = bestRouteIndex.HasValue
+                    ? allAdapters.FirstOrDefault(a => a.InterfaceIndex == bestRouteIndex.Value)
+                    : null;
+
+                if (isServiceRunning)
                 {
                     string currentConfigured = ConfigManager.Instance.Settings.Program.SpecifiedAdapter;
-                    if (active.FriendlyName != currentConfigured && !string.IsNullOrEmpty(active.FriendlyName))
-                    {
-                        WriteLog($"Adapter changed from {currentConfigured} to {active.FriendlyName}. Switching...", LogLevel.Info);
+                    bool shouldEmergencyStop = false;
+                    string stopReason = "";
 
-                        bool isServiceRunning = false;
-                        if (!_isBusy)
-                            Dispatcher.Invoke(() => isServiceRunning = !ServiceStatusText.Text.Contains("未运行"));
+                    if (isAutoMode)
+                    {
+                        if (bestAdapter == null)
+                        {
+                            shouldEmergencyStop = true;
+                            stopReason = "Network connection lost (Auto Mode)";
+                        }
+                    }
+                    else
+                    {
+                        if (!allAdapters.Any(a => a.FriendlyName == currentConfigured))
+                        {
+                            shouldEmergencyStop = true;
+                            stopReason = $"Configured adapter [{currentConfigured}] removed from system (Manual Mode)";
+                        }
+                    }
+
+                    if (shouldEmergencyStop)
+                    {
+                        WriteLog($"[EMERGENCY STOP] {stopReason}", LogLevel.Error);
+
+                        await Dispatcher.InvokeAsync(async () =>
+                        {
+                            TaskbarIcon.ShowBalloonTip("服务已停止", "检测到当前网络适配器丢失，已停止服务。", BalloonIcon.Error);
+                            await ExecuteStopServiceAsync(true);
+                        });
+                        return;
+                    }
+                }
+
+                if (isAutoMode && bestAdapter != null)
+                {
+                    string currentConfigured = ConfigManager.Instance.Settings.Program.SpecifiedAdapter;
+
+                    // If the best adapter is not the currently configured one
+                    if (bestAdapter.FriendlyName != currentConfigured)
+                    {
+                        WriteLog($"Auto-Switch: Detected {bestAdapter.FriendlyName} is better than {currentConfigured}. Switching...", LogLevel.Info);
 
                         if (isServiceRunning)
                         {
-                            var oldAdapter = (await NetworkAdapterUtils.GetNetworkAdaptersAsync(NetworkAdapterUtils.ScopeNeeded.All))
-                                .FirstOrDefault(d => d.FriendlyName == currentConfigured);
-
+                            // Service is running: switch traffic
+                            var oldAdapter = allAdapters.FirstOrDefault(d => d.FriendlyName == currentConfigured);
                             if (oldAdapter != null) await _proxyService.RestoreAdapterDNSAsync(oldAdapter);
-                            await _proxyService.SetLoopbackDNSAsync(active);
+
+                            await _proxyService.SetLoopbackDNSAsync(bestAdapter);
                             await Task.Run(() => NetworkUtils.FlushDNS());
                         }
 
-                        ConfigManager.Instance.Settings.Program.SpecifiedAdapter = active.FriendlyName;
+                        // Update Config
+                        ConfigManager.Instance.Settings.Program.SpecifiedAdapter = bestAdapter.FriendlyName;
                         ConfigManager.Instance.Save();
 
                         Dispatcher.Invoke(() =>
                         {
-                            bool exists = false;
-                            foreach (var item in AdaptersCombo.Items) { if (item.ToString() == active.FriendlyName) { exists = true; break; } }
-                            if (!exists) AdaptersCombo.Items.Add(active.FriendlyName);
-                            AdaptersCombo.SelectedItem = active.FriendlyName;
+                            UpdateAdaptersCombo(allAdapters);
+                            AdaptersCombo.SelectedItem = bestAdapter.FriendlyName;
                         });
                     }
                 }
+
+                if (!isServiceRunning)
+                    Dispatcher.Invoke(() => UpdateAdaptersCombo(allAdapters));
             }
             catch (Exception ex)
             {
-                WriteLog($"Auto-switch adapter error: {ex.Message}", LogLevel.Error, ex);
+                WriteLog($"Adapter monitor error: {ex.Message}", LogLevel.Error);
             }
             finally
             {
                 _isSwitchingAdapter = false;
             }
+        }
+
+        private void UpdateAdaptersCombo(List<NetworkAdapter> adapters)
+        {
+            var currentItems = AdaptersCombo.Items.OfType<string>().ToList();
+            var newItems = adapters.Select(a => a.FriendlyName).ToList();
+
+            if (currentItems.SequenceEqual(newItems)) return;
+
+            var selected = AdaptersCombo.SelectedItem;
+            AdaptersCombo.Items.Clear();
+            foreach (var name in newItems) AdaptersCombo.Items.Add(name);
+
+            if (selected != null && newItems.Contains(selected))
+                AdaptersCombo.SelectedItem = selected;
         }
 
         private void AdaptersCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -559,18 +616,10 @@ namespace SNIBypassGUI.Views
             bool newState = !current;
 
             // Immediate UI update logic
-            if (newState)
-            {
-                if (!_adapterSwitchTimer.IsEnabled) _adapterSwitchTimer.Start();
-                AdapterAutoSwitchTimer_Tick(null, new EventArgs());
-            }
-            else if (_adapterSwitchTimer.IsEnabled) _adapterSwitchTimer.Stop();
-
-            // Update Config
+            if (newState) AdapterAutoSwitchTimer_Tick(null, new EventArgs());
             ConfigManager.Instance.Settings.Program.AutoSwitchAdapter = newState;
             ConfigManager.Instance.Save();
 
-            // UI Update
             AutoSwitchAdapterBtn.Content = $"自动：{newState.ToOnOff()}";
             AdaptersCombo.IsEnabled = !newState;
         }
@@ -735,9 +784,6 @@ namespace SNIBypassGUI.Views
             bool autoSwitch = settings.Program.AutoSwitchAdapter;
             AutoSwitchAdapterBtn.Content = $"自动：{autoSwitch.ToOnOff()}";
             AdaptersCombo.IsEnabled = !autoSwitch;
-
-            if (autoSwitch) if (!_adapterSwitchTimer.IsEnabled) _adapterSwitchTimer.Start();
-            else if (_adapterSwitchTimer.IsEnabled) _adapterSwitchTimer.Stop();
         }
 
         private void UpdateConfigFromToggleButtons()
@@ -1054,7 +1100,7 @@ namespace SNIBypassGUI.Views
         private async void RefreshBtn_Click(object sender, RoutedEventArgs e)
         {
             RefreshBtn.IsEnabled = false;
-            UpdateServiceStatus();
+            Dispatcher.Invoke(UpdateUiState);
             await ConfigManager.Instance.LoadAsync();
             ApplySettings();
             WriteLog("Manual refresh triggered.", LogLevel.Info);
@@ -1103,7 +1149,7 @@ namespace SNIBypassGUI.Views
                 else
                 {
                     if (_tempFilesTimer.IsEnabled) _tempFilesTimer.Stop();
-                    UpdateServiceStatus();
+                    Dispatcher.Invoke(UpdateUiState);
                 }
             }
         }

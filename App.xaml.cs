@@ -99,8 +99,7 @@ namespace SNIBypassGUI
 
             if (ArgumentUtils.ContainsArgument(args, AppConsts.AutoStartArgument))
                 mainWindow.RunInSilentMode();
-            else
-                mainWindow.Show();
+            else mainWindow.Show();
         }
 
         private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

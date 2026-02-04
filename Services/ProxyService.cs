@@ -117,10 +117,8 @@ namespace SNIBypassGUI.Services
         {
             try
             {
-                if (NetworkUtils.IsPortInUse(80, false) || NetworkUtils.IsPortInUse(443, false))
-                {
+                if (PortUtils.IsTcpPortInUse(80) || PortUtils.IsTcpPortInUse(443))
                     WriteLog("Port 80 or 443 is in use. Nginx might fail to start.", LogLevel.Warning);
-                }
                 await Task.Run(() => ProcessUtils.StartProcess(PathConsts.Nginx, "", PathConsts.NginxDirectory, false, true));
             }
             catch (Exception ex)

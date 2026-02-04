@@ -95,38 +95,6 @@ namespace SNIBypassGUI.Common.Network
         public static bool IsValidIP(string ipAddress) =>
             IsValidIPv4(ipAddress) || IsValidIPv6(ipAddress);
 
-        /// <summary>
-        /// Checks if a specific port is in use.
-        /// </summary>
-        /// <param name="port">The port number to check.</param>
-        /// <param name="checkUdp">If true, checks UDP listeners; otherwise, checks TCP listeners (default).</param>
-        /// <returns>True if the port is occupied; otherwise, false.</returns>
-        public static bool IsPortInUse(int port, bool checkUdp = false)
-        {
-            try
-            {
-                IPGlobalProperties ipProperties = IPGlobalProperties.GetIPGlobalProperties();
-
-                // Check TCP Listeners (Common for Web Servers like Nginx)
-                IPEndPoint[] tcpEndPoints = ipProperties.GetActiveTcpListeners();
-                if (tcpEndPoints.Any(endPoint => endPoint.Port == port)) return true;
-
-                // Check UDP Listeners (For QUIC/HTTP3 or DNS)
-                if (checkUdp)
-                {
-                    IPEndPoint[] udpEndPoints = ipProperties.GetActiveUdpListeners();
-                    if (udpEndPoints.Any(endPoint => endPoint.Port == port)) return true;
-                }
-
-                return false;
-            }
-            catch (Exception ex)
-            {
-                WriteLog($"Exception occurred while checking port {port}.", LogLevel.Error, ex);
-                return false;
-            }
-        }
-
         #endregion
 
         #region DNS Operations
@@ -141,7 +109,7 @@ namespace SNIBypassGUI.Common.Network
             {
                 // Call the low-level API defined in WinApiUtils
                 // DnsFlushResolverCache returns a BOOL (non-zero is success, zero is failure)
-                uint result = NetApi.DnsFlushResolverCache();
+                uint result = Dnsapi.DnsFlushResolverCache();
 
                 if (result != 0)
                 {

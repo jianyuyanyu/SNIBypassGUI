@@ -329,7 +329,7 @@ namespace SNIBypassGUI.Common.Network
         public static uint? GetDefaultRouteInterfaceIndex()
         {
             const uint IpV4AddrAny = 0;
-            int result = NetApi.GetBestInterface(IpV4AddrAny, out uint bestIfIndex);
+            int result = Iphlpapi.GetBestInterface(IpV4AddrAny, out uint bestIfIndex);
 
             if (result == 0) return bestIfIndex;
             else
