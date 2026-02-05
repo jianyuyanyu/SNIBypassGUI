@@ -49,16 +49,18 @@ namespace SNIBypassGUI.Views
 
         // Timers
         private readonly DispatcherTimer _serviceStatusTimer = new() { Interval = TimeSpan.FromSeconds(3) };
-        private readonly DispatcherTimer _tempFilesTimer = new() { Interval = TimeSpan.FromSeconds(3) };
+        private readonly DispatcherTimer _tempFilesTimer = new() { Interval = TimeSpan.FromSeconds(10) };
         private readonly DispatcherTimer _adapterSwitchTimer = new() { Interval = TimeSpan.FromSeconds(5) };
 
         // Configuration Watcher
         public static FileSystemWatcher ConfigWatcher = new()
         {
             Filter = Path.GetFileName(PathConsts.ConfigJson),
-            NotifyFilter = NotifyFilters.LastWrite
+            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
         };
         private static readonly Timer _reloadDebounceTimer = new(500.0) { AutoReset = false };
+
+        private bool _suppressAdapterSave = false;
 
         private volatile bool _isSwitchingAdapter = false;
         private bool _isSilentStartup = false;
@@ -84,6 +86,7 @@ namespace SNIBypassGUI.Views
             _adapterSwitchTimer.Tick += AdapterAutoSwitchTimer_Tick;
             _serviceStatusTimer.Tick += (_, _) => UpdateUiState();
             _tempFilesTimer.Tick += (_, _) => UpdateTempFilesSize();
+            _reloadDebounceTimer.Elapsed += OnReloadDebounceTimerElapsed;
 
             BackgroundService = new ImageSwitcherService();
             BackgroundService.PropertyChanged += OnBackgroundChanged;
@@ -94,6 +97,16 @@ namespace SNIBypassGUI.Views
             TaskbarIcon.TrayBalloonTipClicked += (s, e) => ShowMainFromTray();
 
             MainTabControl.SelectionChanged += TabControl_SelectionChanged;
+
+            if (string.IsNullOrEmpty(ConfigWatcher.Path))
+            {
+                if (Directory.Exists(PathConsts.DataDirectory))
+                {
+                    ConfigWatcher.Path = PathConsts.DataDirectory;
+                    ConfigWatcher.Changed += OnConfigChanged;
+                    ConfigWatcher.EnableRaisingEvents = true;
+                }
+            }
 
             TrayIconUtils.RefreshNotification();
         }
@@ -120,6 +133,9 @@ namespace SNIBypassGUI.Views
             WindowTitle.Text += $" {AppConsts.CurrentVersion}";
 
             if (ConfigManager.Instance.Settings == null) await ConfigManager.Instance.LoadAsync();
+
+            await Task.Run(_startupService.EnsureTaskScheduler);
+
             ApplySettings();
 
             await AddSwitchesToList();
@@ -216,7 +232,7 @@ namespace SNIBypassGUI.Views
                     });
                 });
 
-                await Task.Run(() => NetworkUtils.FlushDNS());
+                await Task.Run(NetworkUtils.FlushDNS);
                 return true;
             }
             catch (Exception ex)
@@ -308,7 +324,7 @@ namespace SNIBypassGUI.Views
                     });
                 });
 
-                await Task.Run(() => NetworkUtils.FlushDNS());
+                await Task.Run(NetworkUtils.FlushDNS);
                 success = true;
             }
             catch (Exception ex)
@@ -342,7 +358,7 @@ namespace SNIBypassGUI.Views
             }
 
             AcrylicUtils.RemoveAcrylicCacheFile();
-            await Task.Run(() => NetworkUtils.FlushDNS());
+            await Task.Run(NetworkUtils.FlushDNS);
 
             ApplyBtn.Content = "应用更改";
         }
@@ -455,26 +471,57 @@ namespace SNIBypassGUI.Views
 
         private async Task InitializeAdapterSelection()
         {
-            if (AdaptersCombo.SelectedItem == null)
-            {
-                var active = await GetActiveAdapter();
-                if (active != null)
-                {
-                    bool exists = AdaptersCombo.Items.OfType<string>().Any(item => item == active.FriendlyName);
-                    if (!exists) await UpdateAdaptersCombo();
+            _suppressAdapterSave = true;
 
-                    AdaptersCombo.SelectedItem = active.FriendlyName;
-                }
-                else
+            try
+            {
+                if (AdaptersCombo.Items.Count == 0) await UpdateAdaptersCombo();
+
+                string configAdapter = ConfigManager.Instance.Settings.Program.SpecifiedAdapter;
+                bool isRestored = false;
+
+                if (!string.IsNullOrEmpty(configAdapter))
                 {
-                    if (AdaptersCombo.Items.Count == 0) await UpdateAdaptersCombo();
-                    if (AdaptersCombo.Items.Count == 0)
+                    if (AdaptersCombo.Items.Contains(configAdapter))
                     {
-                        WriteLog("No active network adapters found.", LogLevel.Warning);
-                        if (MessageBox.Show("没有找到活动且可设置的网络适配器，您可能需要手动设置。\n点击“是”将为您展示有关帮助。", "警告", MessageBoxButton.YesNo, MessageBoxImage.Exclamation) == MessageBoxResult.Yes)
-                            ProcessUtils.StartProcess(LinksConsts.AdapterNotFoundOrSetupFailedHelpLink, useShellExecute: true);
+                        AdaptersCombo.SelectedItem = configAdapter;
+                        isRestored = true;
+                    }
+                    else WriteLog($"Saved adapter '{configAdapter}' not found in current network interfaces.", LogLevel.Warning);
+                }
+
+                if (!isRestored)
+                {
+                    var active = await GetActiveAdapter();
+                    if (active != null)
+                    {
+                        if (!AdaptersCombo.Items.Contains(active.FriendlyName)) await UpdateAdaptersCombo();
+                        if (AdaptersCombo.Items.Contains(active.FriendlyName))
+                        {
+                            AdaptersCombo.SelectedItem = active.FriendlyName;
+
+                            ConfigManager.Instance.Settings.Program.SpecifiedAdapter = active.FriendlyName;
+                            ConfigManager.Instance.Save();
+                        }
+                    }
+                    else
+                    {
+                        if (AdaptersCombo.Items.Count == 0)
+                        {
+                            WriteLog("No active network adapters found.", LogLevel.Warning);
+                            if (MessageBox.Show("没有找到活动且可设置的网络适配器，您可能需要手动设置。\n点击“是”将为您展示有关帮助。", "警告", MessageBoxButton.YesNo, MessageBoxImage.Exclamation) == MessageBoxResult.Yes)
+                                ProcessUtils.StartProcess(LinksConsts.AdapterNotFoundOrSetupFailedHelpLink, useShellExecute: true);
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                WriteLog("Exception during adapter initialization.", LogLevel.Error, ex);
+            }
+            finally
+            {
+                _suppressAdapterSave = false;
             }
         }
 
@@ -569,7 +616,7 @@ namespace SNIBypassGUI.Views
                             if (oldAdapter != null) await _proxyService.RestoreAdapterDNSAsync(oldAdapter);
 
                             await _proxyService.SetLoopbackDNSAsync(bestAdapter);
-                            await Task.Run(() => NetworkUtils.FlushDNS());
+                            await Task.Run(NetworkUtils.FlushDNS);
                         }
 
                         // Update Config
@@ -614,10 +661,22 @@ namespace SNIBypassGUI.Views
 
         private void AdaptersCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (_suppressAdapterSave)
+            {
+                e.Handled = true;
+                return;
+            }
+
             if (AdaptersCombo.SelectedItem != null)
             {
-                ConfigManager.Instance.Settings.Program.SpecifiedAdapter = AdaptersCombo.SelectedItem.ToString();
-                ConfigManager.Instance.Save();
+                string newAdapter = AdaptersCombo.SelectedItem.ToString();
+                string oldAdapter = ConfigManager.Instance.Settings.Program.SpecifiedAdapter;
+
+                if (newAdapter != oldAdapter)
+                {
+                    ConfigManager.Instance.Settings.Program.SpecifiedAdapter = newAdapter;
+                    ConfigManager.Instance.Save();
+                }
             }
             e.Handled = true;
         }
@@ -680,12 +739,12 @@ namespace SNIBypassGUI.Views
                 }
             });
         }
+
         private void AddSwitchToUI(SwitchItem item)
         {
             Switchlist.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             int rowIndex = Switchlist.RowDefinitions.Count - 1;
 
-            // 1. Favicon
             Image favicon = new()
             {
                 Source = item.FaviconImage,
@@ -697,20 +756,83 @@ namespace SNIBypassGUI.Views
             Grid.SetColumn(favicon, 0);
             Switchlist.Children.Add(favicon);
 
-            // 2. Text & Links
-            TextBlock textBlock = new()
+            StackPanel contentPanel = new()
             {
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(5.0, 3.0, 10.0, 3.0),
-                TextWrapping = TextWrapping.Wrap
+                Orientation = Orientation.Vertical
             };
-            textBlock.Inlines.Add(new Run { Text = item.DisplayName, FontSize = 16.0 });
-            textBlock.Inlines.Add(new LineBreak());
+
+            Grid headerGrid = new();
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            TextBlock nameBlock = new()
+            {
+                Text = item.DisplayName,
+                FontSize = 16.0,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                TextWrapping = TextWrapping.NoWrap
+            };
+            Grid.SetColumn(nameBlock, 0);
+            headerGrid.Children.Add(nameBlock);
+
+
+            if (item.Status != ItemBadgeStatus.None)
+            {
+                Border badgeBorder = new()
+                {
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(8),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Margin = new Thickness(8, 0, 0, 0)
+                };
+
+                TextBlock badgeText = new()
+                {
+                    FontSize = 12,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new Thickness(6, 0, 6, 0)
+                };
+
+                switch (item.Status)
+                {
+                    case ItemBadgeStatus.IPv6:
+                        badgeBorder.BorderBrush = Brushes.DodgerBlue;
+                        badgeBorder.ToolTip = "此站点需要 IPv6 网络环境";
+                        badgeText.Text = "IPv6";
+                        badgeText.Foreground = Brushes.DodgerBlue;
+                        break;
+
+                    case ItemBadgeStatus.KnownIssue:
+                        badgeBorder.BorderBrush = Brushes.OrangeRed;
+                        badgeBorder.ToolTip = "此站点适配尚存已知问题";
+                        badgeText.Text = "已知问题";
+                        badgeText.Foreground = Brushes.OrangeRed;
+                        break;
+                }
+
+                badgeBorder.Child = badgeText;
+                Grid.SetColumn(badgeBorder, 1);
+                headerGrid.Children.Add(badgeBorder);
+            }
+
+            contentPanel.Children.Add(headerGrid);
+
+            TextBlock linksBlock = new()
+            {
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 2, 0, 0)
+            };
 
             foreach (string part in item.Links)
             {
                 if (part.Length <= 1)
-                    textBlock.Inlines.Add(new Run { Text = part, FontSize = 15.0, FontWeight = FontWeights.Bold });
+                    linksBlock.Inlines.Add(new Run { Text = part, FontSize = 15.0, FontWeight = FontWeights.Bold });
                 else
                 {
                     Run run = new()
@@ -721,14 +843,15 @@ namespace SNIBypassGUI.Views
                         Cursor = Cursors.Hand
                     };
                     run.PreviewMouseDown += LinkText_PreviewMouseDown;
-                    textBlock.Inlines.Add(run);
+                    linksBlock.Inlines.Add(run);
                 }
             }
-            Grid.SetRow(textBlock, rowIndex);
-            Grid.SetColumn(textBlock, 1);
-            Switchlist.Children.Add(textBlock);
+            contentPanel.Children.Add(linksBlock);
 
-            // 3. ToggleButton
+            Grid.SetRow(contentPanel, rowIndex);
+            Grid.SetColumn(contentPanel, 1);
+            Switchlist.Children.Add(contentPanel);
+
             string safeName = $"Toggle_{item.Id.ToSafeIdentifier()}";
 
             ToggleButton toggleButton = new()
@@ -782,7 +905,8 @@ namespace SNIBypassGUI.Views
                 TailUtils.StopTracking(GetLogPath()).GetAwaiter();
                 TailUtils.StopTracking(PathConsts.NginxAccessLog).GetAwaiter();
                 TailUtils.StopTracking(PathConsts.NginxErrorLog).GetAwaiter();
-                FileUtils.ClearFolder(PathConsts.TempDirectory, false);
+                TailUtils.StopTracking(AcrylicUtils.GetLogPath()).GetAwaiter();
+                FileUtils.ClearFolder(PathConsts.TempDirectory);
             }
 
             if (!guiDebug) DisableLog();
@@ -815,12 +939,22 @@ namespace SNIBypassGUI.Views
             _reloadDebounceTimer.Start();
         }
 
-        private void OnReloadDebounceTimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
+        private void OnReloadDebounceTimerElapsed(object sender, ElapsedEventArgs e)
         {
             Dispatcher.Invoke(async () =>
             {
                 try
                 {
+                    if (File.Exists(PathConsts.ConfigJson))
+                    {
+                        DateTime fileTime = File.GetLastWriteTime(PathConsts.ConfigJson);
+                        if ((fileTime - ConfigManager.Instance.LastSaveTime).Duration() < TimeSpan.FromSeconds(2))
+                        {
+                            WriteLog("Ignored internal config save event.", LogLevel.Debug);
+                            return;
+                        }
+                    }
+
                     WriteLog("Configuration file changed externally, reloading...", LogLevel.Info);
                     await ConfigManager.Instance.LoadAsync();
                     ApplySettings();
@@ -863,7 +997,7 @@ namespace SNIBypassGUI.Views
                     else
                     {
                         await TailUtils.StopTracking(GetLogPath());
-                        FileUtils.ClearFolder(PathConsts.LogDirectory, false);
+                        FileUtils.ClearFolder(PathConsts.LogDirectory);
                     }
                 }
                 catch (Exception ex) { WriteLog("Cleanup error.", LogLevel.Error, ex); }
@@ -871,7 +1005,7 @@ namespace SNIBypassGUI.Views
 
             WriteLog("Cleanup complete.", LogLevel.Info);
             _tempFilesTimer.Start();
-            MessageBox.Show("运行日志及缓存清理已完成，请重新启动服务。", "提示", MessageBoxButton.OK, MessageBoxImage.Asterisk);
+            MessageBox.Show("日志及缓存已清理完成，请重新启动服务。", "提示", MessageBoxButton.OK, MessageBoxImage.Asterisk);
             UpdateTempFilesSize();
             CleanBtn.IsEnabled = true;
         }
@@ -894,7 +1028,7 @@ namespace SNIBypassGUI.Views
                     var activeAdapter = adapters.FirstOrDefault(a => a.FriendlyName == ConfigManager.Instance.Settings.Program.SpecifiedAdapter);
                     if (activeAdapter != null) await _proxyService.RestoreAdapterDNSAsync(activeAdapter);
 
-                    await Task.Run(() => NetworkUtils.FlushDNS());
+                    await Task.Run(NetworkUtils.FlushDNS);
                     await TailUtils.StopTracking();
                     await AcrylicUtils.UninstallAcrylicServiceAsync();
                     BackgroundService.Cleanup();
@@ -937,27 +1071,47 @@ namespace SNIBypassGUI.Views
             UpdateBtn.Content = "获取信息…";
             try
             {
+                WriteLog("Checking for updates...", LogLevel.Info);
+
                 string json = await NetworkUtils.GetAsync(LinksConsts.LatestVersionJson);
                 UpdateManifest manifest = JsonConvert.DeserializeObject<UpdateManifest>(json) ?? throw new Exception("Failed to parse update manifest.");
+
+                WriteLog($"Remote version: {manifest.Version}, Current: {AppConsts.CurrentVersion}", LogLevel.Info);
+
                 bool exeUpdated = false;
+                bool assetsUpdated = false;
+
                 if (manifest.Version != AppConsts.CurrentVersion && manifest.Executable != null && manifest.Executable.UpdateRequired)
                 {
+                    WriteLog("New executable version found. Starting update...", LogLevel.Info);
                     UpdateBtn.Content = "正在更新…";
                     await UpdateExecutable(manifest.Executable);
                     exeUpdated = true;
+                    WriteLog("Executable update completed.", LogLevel.Info);
                 }
 
                 if (manifest.Assets != null && manifest.Assets.Count > 0)
-                    await SyncAssets(manifest.Assets);
+                    assetsUpdated = await SyncAssets(manifest.Assets);
 
-                if (exeUpdated)
+                if (exeUpdated || assetsUpdated)
                 {
+                    WriteLog($"[Update] Update finished. ExeUpdated: {exeUpdated}, AssetsUpdated: {assetsUpdated}. Restarting...", LogLevel.Info);
+
                     UpdateBtn.Content = "更新完成";
-                    MessageBox.Show($"主程序已更新至 {manifest.Version}，即将重启。", "更新完成", MessageBoxButton.OK, MessageBoxImage.Asterisk);
-                    ProcessUtils.StartProcess(PathConsts.CurrentExe, $"{AppConsts.WaitForParentArgument} {Process.GetCurrentProcess().Id}", "", false, false);
+                    string msg = exeUpdated
+                        ? $"主程序已更新至 {manifest.Version}，即将重启。"
+                        : "数据文件已同步，即将重启以应用更改。";
+
+                    MessageBox.Show(msg, "更新完成", MessageBoxButton.OK, MessageBoxImage.Asterisk);
+
+                    ProcessUtils.StartProcess(PathConsts.CurrentExe, $"{AppConsts.WaitForParentArgument} {Process.GetCurrentProcess().Id}");
                     ExitBtn.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
                 }
-                else MessageBox.Show("所有文件已同步，当前已是最新版本。", "提示", MessageBoxButton.OK, MessageBoxImage.Asterisk);
+                else
+                {
+                    WriteLog("System is already up to date.", LogLevel.Info);
+                    MessageBox.Show("所有文件已同步，当前已是最新版本。", "提示", MessageBoxButton.OK, MessageBoxImage.Asterisk);
+                }
             }
             catch (Exception ex)
             {
@@ -974,7 +1128,7 @@ namespace SNIBypassGUI.Views
         private async Task UpdateExecutable(ExecutableInfo exeInfo)
         {
             FileUtils.EnsureDirectoryExists(PathConsts.UpdateDirectory);
-            FileUtils.ClearFolder(PathConsts.UpdateDirectory, false);
+            FileUtils.ClearFolder(PathConsts.UpdateDirectory);
             string zipPath = $"update_{Guid.NewGuid():N}.zip";
             try
             {
@@ -1010,28 +1164,47 @@ namespace SNIBypassGUI.Views
             }
         }
 
-        private async Task SyncAssets(List<AssetInfo> assets)
+        private async Task<bool> SyncAssets(List<AssetInfo> assets)
         {
+            bool hasChanges = false;
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+
+            WriteLog($"Starting sync for {assets.Count} assets...", LogLevel.Info);
+
             foreach (AssetInfo asset in assets)
             {
                 string localPath = Path.Combine(baseDir, asset.Path);
                 bool needDownload = true;
+
                 if (File.Exists(localPath))
                 {
                     if (string.Equals(FileUtils.CalculateFileHash(localPath), asset.Hash, StringComparison.OrdinalIgnoreCase))
+                    {
                         needDownload = false;
+                        WriteLog($"Asset skipped (UpToDate): {asset.Path}", LogLevel.Debug);
+                    }
                 }
 
                 if (needDownload)
                 {
-                    UpdateProgressText("正在同步…");
+                    WriteLog($"Downloading asset: {asset.Path}", LogLevel.Info);
+
+                    UpdateProgressText($"正在同步…");
                     FileUtils.EnsureDirectoryExists(Path.GetDirectoryName(localPath));
 
                     bool result = await NetworkUtils.TryDownloadFile(asset.Url, localPath, (p) => { }, 30.0);
-                    if (!result) throw new Exception($"Failed to download asset {asset.Path}");
+                    if (!result)
+                    {
+                        WriteLog($"[Update] Failed to download asset: {asset.Path}", LogLevel.Error);
+                        throw new Exception($"Failed to download asset {asset.Path}");
+                    }
+
+                    WriteLog($"Asset downloaded successfully: {asset.Path}", LogLevel.Info);
+                    hasChanges = true;
                 }
             }
+
+            return hasChanges;
         }
 
         private async Task CheckUpdate(bool silent, bool suppressNotification = false)
@@ -1249,7 +1422,7 @@ namespace SNIBypassGUI.Views
 
         private void DefaultBkgBtn_Click(object sender, RoutedEventArgs e)
         {
-            FileUtils.ClearFolder(PathConsts.BackgroundDirectory, false);
+            FileUtils.ClearFolder(PathConsts.BackgroundDirectory);
             foreach (var pair in CollectionConsts.DefaultBackgroundMap)
                 FileUtils.ExtractResourceToFile(pair.Value, Path.Combine(PathConsts.BackgroundDirectory, pair.Key));
 
@@ -1365,14 +1538,60 @@ namespace SNIBypassGUI.Views
             ApplySettings();
         }
 
-        private void AcrylicDebugBtn_Click(object sender, RoutedEventArgs e)
+        private async void AcrylicDebugBtn_Click(object sender, RoutedEventArgs e)
         {
             bool current = ConfigManager.Instance.Settings.Advanced.AcrylicDebug;
-            if (!current && MessageBox.Show("开启 DNS 服务调试功能，可帮助诊断网络流量走向相关问题。该设置将在服务重启后生效。\n请在重启服务并复现问题后，将相关信息提交给开发者。\n是否确认开启 DNS 服务调试？", "提示", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
-                ConfigManager.Instance.Settings.Advanced.AcrylicDebug = true;
-            else ConfigManager.Instance.Settings.Advanced.AcrylicDebug = false;
-            ConfigManager.Instance.Save();
-            ApplySettings();
+            bool newState = !current;
+
+            string message = newState
+                ? "开启 DNS 服务调试功能，可帮助诊断网络流量走向相关问题。\n如果服务正在运行，将自动重启服务以应用更改。\n是否确认开启？"
+                : "是否关闭 DNS 服务调试功能？\n如果服务正在运行，将自动重启服务以应用更改。";
+
+            if (MessageBox.Show(message, "提示", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            {
+                ConfigManager.Instance.Settings.Advanced.AcrylicDebug = newState;
+                await ConfigManager.Instance.SaveNowAsync();
+
+                ApplySettings();
+
+                bool isServiceRunning = AcrylicUtils.IsAcrylicServiceRunning();
+
+                if (newState) AcrylicUtils.EnableAcrylicServiceHitLog();
+                else AcrylicUtils.DisableAcrylicServiceHitLog();
+
+                if (isServiceRunning)
+                {
+                    SetBusyState(true);
+                    ServiceStatusText.Text = "DNS服务重启中";
+
+                    try
+                    {
+                        await TailUtils.StopTracking(AcrylicUtils.GetLogPath());
+
+                        await AcrylicUtils.StopAcrylicService();
+                        await AcrylicUtils.StartAcrylicService();
+
+                        if (newState)
+                        {
+                            await Task.Delay(500);
+                            TailUtils.StartTracking(AcrylicUtils.GetLogPath(), "HitLog");
+                        }
+
+                        await Task.Run(NetworkUtils.FlushDNS);
+                    }
+                    catch (Exception ex)
+                    {
+                        WriteLog("Error applying DNS debug configuration.", LogLevel.Error, ex);
+                        MessageBox.Show($"应用更改失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                    finally
+                    {
+                        SetBusyState(false);
+                        UpdateUiState();
+                    }
+                }
+                else if (!newState) await TailUtils.StopTracking(AcrylicUtils.GetLogPath());
+            }
         }
 
         private async void GUIDebugBtn_Click(object sender, RoutedEventArgs e)

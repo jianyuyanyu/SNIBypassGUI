@@ -20,9 +20,10 @@ namespace SNIBypassGUI.Services
 
         private readonly SemaphoreSlim _fileLock = new(1, 1);
         private readonly System.Timers.Timer _debounceTimer;
-        private volatile bool _isDirty = false; // Marked volatile for thread safety
+        private volatile bool _isDirty = false;
 
-        public AppConfig Settings { get; set; } // Changed to public set for loading flexibility
+        public AppConfig Settings { get; set; }
+        public DateTime LastSaveTime { get; private set; } = DateTime.MinValue;
 
         private ConfigManager()
         {
@@ -114,6 +115,9 @@ namespace SNIBypassGUI.Services
                 if (!Directory.Exists(dir)) Directory.CreateDirectory(dir!);
 
                 await FileUtils.WriteAllTextAsync(PathConsts.ConfigJson, json);
+
+                if (File.Exists(PathConsts.ConfigJson))
+                    LastSaveTime = File.GetLastWriteTime(PathConsts.ConfigJson);
             }
             catch (Exception ex)
             {

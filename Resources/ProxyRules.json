@@ -1,7 +1,7 @@
 [
     {
         "Id": "Amazon Japan",
-        "DisplayName": "Amazon（日本）",
+        "DisplayName": "Amazon Japan",
         "Links": [
             "amazon.co.jp"
         ],
@@ -37,7 +37,7 @@
     },
     {
         "Id": "BBC",
-        "DisplayName": "BBC（未完整支持）",
+        "DisplayName": "BBC",
         "Links": [
             "bbc.com"
         ],
@@ -84,7 +84,7 @@
     },
     {
         "Id": "Dropbox",
-        "DisplayName": "Dropbox（未完整支持）",
+        "DisplayName": "Dropbox",
         "Links": [
             "dropbox.com"
         ],
@@ -102,7 +102,7 @@
     },
     {
         "Id": "E-Hentai",
-        "DisplayName": "E-Hentai（含里站）",
+        "DisplayName": "E-Hentai",
         "Links": [
             "e-hentai.org",
             "、",
@@ -242,7 +242,7 @@
     },
     {
         "Id": "Nyaa",
-        "DisplayName": "Nyaa（含里站）",
+        "DisplayName": "Nyaa",
         "Links": [
             "nyaa.si",
             "、",
@@ -388,7 +388,7 @@
     },
     {
         "Id": "Rutube",
-        "DisplayName": "Rutube（未完整支持）",
+        "DisplayName": "Rutube -",
         "Links": [
             "rutube.ru"
         ],
@@ -518,11 +518,13 @@
     },
     {
         "Id": "Wikimedia Foundation",
-        "DisplayName": "Wikimedia 全项目",
+        "DisplayName": "Wikimedia Foundation",
         "Links": [
             "wikipedia.org",
             "、",
             "wiktionary.org",
+			"、",
+			"wikiquote.org",
             "等"
         ],
         "Favicon": "iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAQAAAD9CzEMAAAC2ElEQVRYw+2Yu47TQBSGv1ltj2gyoqRaKmRoqNACRSK6RRSkW7FN3iASTxBewKLj0iCloKGJREVnUbGisWipnDT7BvNTeOx4PM6FZb3VniminDNz/nMf24aAnPhvOjDNf/Wfq1DdBWP6Ub+GMH2pryBMf+pLiIP+lHuIvgFMnwG6Fg9uAHbSIcBzloDltmdesASGvOVhB/8df5g1+Bcso70XLLnHZwAnp0xTJTKNZTVTJqeFJp6DkNFEcznlSjWq+SOlyoO95flcTk44lavQVNTiQq5ec1kvmTW4uTcpbfCcZjIyGjXOsxYWGnuAcXDIaeo9mKq9exqY4jSXkfW2RwBOC29r0jqWeWubnmWySgJVTk6pCPx0CqroASeAOOdnUAmPGAKw4kvN+86SNxwF+1Z8JeFJWEau5aIVQknLslyJaPiQyQaRriIQhjHyAI5JADjnR8A/YogBVnwA4CMrzhi07P+E5Wm7EVwUReMroe2DlRGyKpR1FILbwI0ACiVCiCiBVZVPNZbVIlI1k9F8N8C6KMcdPpR5MJooNsxGmdsAUAbDyERJHPuGs5F3ZWjT/QBc3XCTCNrUeWifsVH3bAHIvA+2w4cqD+3ybjfYhjKtGusOoLoo13TL/37jd8B/j+V197x2nbgLH4wwbXlj3k4Dj+lI+5YQlTEtg9RM3FhG87pP8oCf/ytA6rth1LCzTPvY3w1VzPPOBtsJ4OrOrZpn5JOe1+ErrZ5ssX8rwMxX/biukypcVS2lvsFGcpcBKPxktcrkNGrUeeYBEhWaySi7HIDzlyiaKQ3mTFHPpVRJ54DYEyD3ibbR9F/UtzcdA25vgPUtbVrTs/C1xIYBsSfAOtpxG80bid62djzZ3WUIDDiJJMe8AgY8265g16PjgDPEKaMOyWPgtHXtx3S4Q859przolLzk1wZJk3p/Abl5CdxJ1/Ei3hdE41NCHxCtjyFXCRN+zvkL9aEWt2hTkbEAAAAASUVORK5CYII=",
@@ -530,9 +532,9 @@
     },
     {
         "Id": "YouTube",
-        "DisplayName": "YouTube（IPv6 完全支持）",
+        "DisplayName": "YouTube -",
         "Links": [
-            "www.youtube.com"
+            "youtube.com"
         ],
         "Favicon": "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",
         "Hosts": "MTI3LjAuMC4xIHlvdXR1YmUuY29tDQoxMjcuMC4wLjEgKi55b3V0dWJlLmNvbQ0KMTI3LjAuMC4xICouKi55b3V0dWJlLmNvbQ0KMTI3LjAuMC4xICouKi4qLnlvdXR1YmUuY29tDQoxMjcuMC4wLjEgeW91dHUuYmUNCjEyNy4wLjAuMSB5dGltZy5jb20NCjEyNy4wLjAuMSAqLnl0aW1nLmNvbQ0KMTI3LjAuMC4xIGdncGh0LmNvbQ0KMTI3LjAuMC4xICouZ2dwaHQuY29tDQoxMjcuMC4wLjEgZ29vZ2xldmlkZW8uY29tDQoxMjcuMC4wLjEgKi5nb29nbGV2aWRlby5jb20NCjEyNy4wLjAuMSAqLnlvdXR1YmUtbm9jb29raWUuY29tDQoxMjcuMC4wLjEgKi55b3V0dWJlLTNyZC1wYXJ0eS5jb20="

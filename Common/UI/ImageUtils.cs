@@ -37,7 +37,8 @@ namespace SNIBypassGUI.Common.UI
                 image.EndInit();
                 image.Freeze();
 
-                cache?[imagePath] = image;
+                // cache?[imagePath] = image;
+                if (cache != null) cache[imagePath] = image;
             }
             catch (FileNotFoundException)
             {

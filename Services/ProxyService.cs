@@ -50,7 +50,7 @@ namespace SNIBypassGUI.Services
                 {
                     WriteLog($"Setting DNS for adapter: {activeAdapter.FriendlyName}", LogLevel.Info);
                     await SetLoopbackDNSAsync(activeAdapter);
-                    await Task.Run(() => NetworkUtils.FlushDNS());
+                    await Task.Run(NetworkUtils.FlushDNS);
                 }
                 else WriteLog("Specified network adapter not found during start sequence.", LogLevel.Warning);
             }
@@ -89,10 +89,8 @@ namespace SNIBypassGUI.Services
                     statusCallback?.Invoke("DNS服务停止中");
                     try
                     {
-                        if (AcrylicUtils.IsAcrylicServiceHitLogEnabled())
-                            await TailUtils.StopTracking(AcrylicUtils.GetLogPath());
-
-                        await Task.Run(() => AcrylicUtils.StopAcrylicService());
+                        await TailUtils.StopTracking(AcrylicUtils.GetLogPath());
+                        await Task.Run(AcrylicUtils.StopAcrylicService);
                     }
                     catch (Exception ex)
                     {
